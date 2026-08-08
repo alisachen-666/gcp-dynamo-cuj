@@ -4,7 +4,7 @@
 set -uo pipefail
 export PATH=$HOME/google-cloud-sdk/bin:$PATH
 D=$HOME/dsr1-pareto/dsv4-sweep
-DEST="gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs"
+DEST="gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs"
 S=$(mktemp -d); PID=p2
 kubectl rollout restart "deployment/dsv4-$PID-frontend" -n dynamo-cloud >/dev/null
 kubectl rollout status "deployment/dsv4-$PID-frontend" -n dynamo-cloud --timeout=420s >/dev/null

@@ -51,7 +51,7 @@ NVIDIA/srt-slurm `recipes/dsv4-pro/sglang/gb300-fp4/8k1k/disagg/` (vendored verb
 **Setup**
 - Cluster: `REDACTED-GKE-CLUSTER-OLD` (REDACTED-GCP-PROJECT), np-2 NVL72 domain, `a4x-maxgpu-4g-metal` (4x GB300/node)
 - Model: `deepseek-ai/DeepSeek-V4-Pro`, **mxfp4**, staged to
-  `gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro/` and seeded to all 18 nodes' local SSD
+  `gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro/` and seeded to all 18 nodes' local SSD
 - Serving: NVIDIA Dynamo built from git hash **`81d0555`** (aarch64 wheels built in-cluster),
   NATS request plane, operator-less Deployments/StatefulSets, **mooncake** KV transfer
 - Spec decode: **EAGLE MTP** (num-steps 3, eagle-topk 1, draft-tokens 4) on decode workers

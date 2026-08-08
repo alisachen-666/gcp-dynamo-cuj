@@ -51,7 +51,7 @@ Server flags per point: take the recipe file's `sglang_config` prefill/decode se
    **Bake dynamo@`81d0555` into a derived image** pushed to Artifact Registry (source build —
    Rust toolchain; do NOT pip-install per pod: the hash build is too heavy for startup).
 3. **Model staging**: download `deepseek-ai/DeepSeek-V4-Pro` ONCE -> stage to
-   `gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro/` (reuse `../common/stage-model-to-gcs.sh`
+   `gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro/` (reuse `../common/stage-model-to-gcs.sh`
    pattern); workers read from hostPath mirror or gcsfuse. NEVER per-pod HF downloads
    (429 + dynamo fetch_llm dies on first 429). CHECK FIRST: HF availability/gating + size of
    V4-Pro (likely ~400+ GB at fp4; EAGLE draft weights may be a separate artifact — check
@@ -92,11 +92,11 @@ Server flags per point: take the recipe file's `sglang_config` prefill/decode se
 
 - [x] `deepseek-ai/DeepSeek-V4-Pro`: PUBLIC, not gated, 64 safetensors shards; NO separate
       MTP/draft files -> EAGLE weights are in-checkpoint (like DSR1 NextN). Staging to
-      `gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro/` in progress (dsv4-model-stage job).
+      `gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro/` in progress (dsv4-model-stage job).
 - [~] nightly image arm64: pull + python/sglang import validated CPU-side in dsv4-dynamo-build
       job; GPU kernel validation pending first GPU point.
 - [~] dynamo@`81d0555` aarch64 build: in progress (dsv4-dynamo-build job: rustup + maturin
-      build of lib/bindings/python + ai-dynamo wheel -> `gs://REDACTED-MODELS-BUCKET/dynamo-wheels/81d0555/`).
+      build of lib/bindings/python + ai-dynamo wheel -> `gs://alisachen-models/dynamo-wheels/81d0555/`).
       Distribution to pods: seed wheels to node hostPath (same pattern as model seeding);
       pods `pip install /wheels/*.whl` (no in-pod git builds).
 - [ ] 0.8.1 etcd/NATS chart services vs dynamo@hash workers (recipes force NATS request

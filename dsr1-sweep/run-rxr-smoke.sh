@@ -81,7 +81,7 @@ echo "B(control GPU0-GPU0):  served=$sb  (expect YES, clean rc_mlx5)"
 echo "C(fix candidate):      served=$sc  (fix validated if YES with rc_mlx5 and no wireup errors)"
 
 export CLOUDSDK_AUTH_ACCESS_TOKEN=$(gcloud auth application-default print-access-token 2>/dev/null)
-gcloud storage rsync -r "$S" "gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs/server-logs/dsr1-rxr-smoke" 2>&1 | tail -1
+gcloud storage rsync -r "$S" "gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs/server-logs/dsr1-rxr-smoke" 2>&1 | tail -1
 cp -r "$S" "$D/results-summary/rxr-smoke-logs" 2>/dev/null
 echo "=== tearing down rxr"
 kubectl delete -n dynamo-cloud deployment/$PFX-frontend deployment/$PFX-prefill deployment/$PFX-decode service/$PFX-frontend >/dev/null 2>&1

@@ -205,7 +205,7 @@ configuration that differs.
 2. Ensure DraNet then publishes those NICs with `rdma=true` so `mrdma.google.com`
    ResourceClaims allocate (official recipe compatibility).
 3. (While in there) Consider granting cluster RBAC to the benchmarking service account
-   `alisa-gcs-sa@REDACTED-GCS-BUCKET.iam.gserviceaccount.com` (numeric ID
+   `alisa-gcs-sa@gke-aishared-gsc-dev.iam.gserviceaccount.com` (numeric ID
    `103697796161254948063` — tokens lack email scope), so automation does not depend on
    daily-expiring user ADC.
 

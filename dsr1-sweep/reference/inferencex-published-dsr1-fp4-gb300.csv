@@ -3,7 +3,7 @@
 # Attribution to InferenceX is required for any derivative work.
 #
 # Merged + deduped from 3 dashboard exports (InferenceX_DeepSeek-R1-0528_e2e (1|2|3).csv in
-# gs://REDACTED-GCS-BUCKET/mlperf_results/); rows verified identical where duplicated.
+# gs://gke-aishared-gsc-dev/mlperf_results/); rows verified identical where duplicated.
 #
 # UNIT WARNING (verified 2026-08-01, same as the DSv4 CSV): the "(ms)" latency columns
 # (TTFT/TPOT/ITL/E2E) are actually SECONDS — proven by Interactivity == 1/TPOT holding

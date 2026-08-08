@@ -75,7 +75,7 @@ headless Service), not one Deployment with N replicas. Decode is a single 8-node
 - **F0 — image/env validation** (1 node): sanity job on `v0.5.8.post1-cu130`: imports, GB300
   kernels, `pip install ai-dynamo{,-runtime}==0.8.0` + `import dynamo.sglang`, NIXL agent creation,
   4-GPU NCCL allreduce. Gate for everything else. (~10 min; mostly image pull.)
-- **F1 — model staging**: `deepseek-ai/DeepSeek-R1-0528` (688.6 GB) → `gs://REDACTED-MODELS-BUCKET/`
+- **F1 — model staging**: `deepseek-ai/DeepSeek-R1-0528` (688.6 GB) → `gs://alisachen-models/`
   then seed to all 18 nodes' local SSD at `/mnt/stateful_partition/kube-ephemeral-ssd/dsr1-fp8-model`.
   Reuse `../common/stage-model-to-gcs.sh` + `seed-model-all-nodes.sh`.
 - **F2 — L1/L2** (2 nodes): low-latency conc 4, 8. Smallest e2e; proves FP8 quantization path,

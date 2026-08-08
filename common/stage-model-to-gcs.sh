@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Stage the NVFP4 model from the M2 decode pod to gs://REDACTED-MODELS-BUCKET/deepseek-ai/.
+# Stage the NVFP4 model from the M2 decode pod to gs://alisachen-models/deepseek-ai/.
 # Waits for the pod's download to finish, materializes the HF snapshot (deref symlinks),
 # installs cloud CLI in-pod, uploads with a VM-minted token (re-mints per attempt).
 set -uo pipefail
 NS=dynamo-cloud
-DEST=gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2
+DEST=gs://alisachen-models/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2
 
 POD=$(kubectl get pods -n $NS -l app=dsr1-m2-decode -o jsonpath='{.items[0].metadata.name}')
 echo "using pod: $POD"

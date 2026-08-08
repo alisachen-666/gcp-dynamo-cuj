@@ -37,8 +37,8 @@ spec:
         args:
         - |
           set -e
-          gcloud storage rsync -r gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro /model
-          gcloud storage rsync -r gs://REDACTED-MODELS-BUCKET/dynamo-wheels/81d0555 /wheels
+          gcloud storage rsync -r gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro /model
+          gcloud storage rsync -r gs://alisachen-models/dynamo-wheels/81d0555 /wheels
           echo "seeded: \$(ls /model/*.safetensors | wc -l) shards, \$(ls /wheels/*.whl | wc -l) wheels on \$(hostname)"
         env:
         - {name: CLOUDSDK_AUTH_ACCESS_TOKEN, value: "$TOKEN"}

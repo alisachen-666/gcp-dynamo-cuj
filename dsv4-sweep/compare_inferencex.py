@@ -106,8 +106,8 @@ def fmt_gap(ours, theirs, lower_is_better=False):
 
 
 
-GCS = 'https://console.cloud.google.com/storage/browser/REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs'
-GCSF = 'https://console.cloud.google.com/storage/browser/_details/REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs'
+GCS = 'https://console.cloud.google.com/storage/browser/gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs'
+GCSF = 'https://console.cloud.google.com/storage/browser/_details/gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs'
 GH = 'https://github.com/alisachen-666/gcp-dynamo-cuj/blob/main'
 RUNLINKS = {
     'p1': ('dsv4-point1', None, 'dsv4-sweep/manifests/point1-1p1d-tp4-mtp.yaml'),

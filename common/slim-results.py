@@ -5,7 +5,7 @@ Raw results contain per-request/per-token arrays (ttfts, itls, generated_texts..
 which reach hundreds of MB. This strips them but PRE-COMPUTES the p90/p95
 percentiles the report generators derive from those arrays, so reports remain
 fully reproducible from the slim copies. Raw JSONs stay out of git (archived in
-gs://REDACTED-GCS-BUCKET/mlperf_results/.../results/).
+gs://gke-aishared-gsc-dev/mlperf_results/.../results/).
 """
 import json, glob, os
 

@@ -21,7 +21,7 @@ PID=$1
 EXP=${2:-2}
 PASSES=${3:-1}
 D=$HOME/dsr1-pareto/dsv4-sweep
-DEST="gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs"
+DEST="gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs"
 S=$(mktemp -d)
 
 echo "=== deploying $PID (passes: $PASSES)"

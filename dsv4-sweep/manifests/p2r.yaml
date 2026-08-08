@@ -4,7 +4,7 @@
 # DSv4 p2: disagg-low-latency-1p6d-dep4-tp4-mtp (verbatim recipe). 1 prefill DEP4 + 6x TP4 decode workers. 7 nodes/28 GPUs.
 # 1 prefill (TP4) + 1 decode (TP4, EAGLE MTP) + 9 frontends. 2 nodes / 8 GPUs.
 # Image: pinned nightly. dynamo@81d0555 wheels from node hostPath /wheels (seeded).
-# Model: /model hostPath (seeded from gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro).
+# Model: /model hostPath (seeded from gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro).
 apiVersion: resource.nvidia.com/v1beta1
 kind: ComputeDomain
 metadata:

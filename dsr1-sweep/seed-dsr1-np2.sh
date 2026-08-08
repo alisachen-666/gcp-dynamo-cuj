@@ -40,7 +40,7 @@ spec:
         args:
         - |
           set -e
-          gcloud storage rsync -r gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2 /model
+          gcloud storage rsync -r gs://alisachen-models/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2 /model
           echo "seeded: \$(ls /model/*.safetensors 2>/dev/null | wc -l) shards on \$(hostname)"
         env:
         - {name: CLOUDSDK_AUTH_ACCESS_TOKEN, value: "$TOKEN"}

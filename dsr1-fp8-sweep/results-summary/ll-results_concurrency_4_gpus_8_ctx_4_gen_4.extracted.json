@@ -1,5 +1,5 @@
 {
- "_extracted_from": "gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs/client-logs/dsr1fp8-bench-ll.log",
+ "_extracted_from": "gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs/client-logs/dsr1fp8-bench-ll.log",
  "_note": "reconstructed from the printed 'Serving Benchmark Result' block; raw per-request arrays lost with the bench pod",
  "backend": "dynamo",
  "burstiness": 1.0,

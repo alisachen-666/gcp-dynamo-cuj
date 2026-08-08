@@ -4,7 +4,7 @@
 set -uo pipefail
 export PATH=$HOME/google-cloud-sdk/bin:$PATH
 NAME=$1; EXP=$2; BEN=$3; JOB=$4
-D=$HOME/dsr1-pareto/dsr1-sweep; DEST="gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs"
+D=$HOME/dsr1-pareto/dsr1-sweep; DEST="gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs"
 S=$(mktemp -d); PFX="dsr1-$NAME"
 echo "=== waiting for $EXP registrations"
 for i in $(seq 1 120); do

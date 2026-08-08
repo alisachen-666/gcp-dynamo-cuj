@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seed DSR1-NVFP4 from gs://REDACTED-MODELS-BUCKET onto ALL np-2 nodes' local SSD
+# Seed DSR1-NVFP4 from gs://alisachen-models onto ALL np-2 nodes' local SSD
 # (/mnt/stateful_partition/kube-ephemeral-ssd/dsr1-model, plain files).
 # Auth: short-lived token minted from this VM's SA, injected at apply time.
 set -euo pipefail
@@ -41,7 +41,7 @@ spec:
           set -e
           N=\$(ls /model/*.safetensors 2>/dev/null | wc -l)
           if [ "\$N" = "163" ]; then echo "already seeded (\$N shards)"; exit 0; fi
-          gcloud storage rsync -r gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2 /model
+          gcloud storage rsync -r gs://alisachen-models/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2 /model
           echo "seeded: \$(ls /model/*.safetensors | wc -l) shards"
         env:
         - {name: CLOUDSDK_AUTH_ACCESS_TOKEN, value: "$TOKEN"}

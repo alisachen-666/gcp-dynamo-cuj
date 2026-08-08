@@ -140,8 +140,8 @@ def g(a, b, lower=False):
 
 
 
-GCS = 'https://console.cloud.google.com/storage/browser/REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs'
-GCSF = 'https://console.cloud.google.com/storage/browser/_details/REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs'
+GCS = 'https://console.cloud.google.com/storage/browser/gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs'
+GCSF = 'https://console.cloud.google.com/storage/browser/_details/gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs'
 GH = 'https://github.com/alisachen-666/gcp-dynamo-cuj/blob/main'
 
 

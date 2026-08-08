@@ -1,7 +1,7 @@
 # DSv4 point 1: disagg-low-latency-1p1d-tp4-tp4-mtp (verbatim srt-slurm recipe flags).
 # 1 prefill (TP4) + 1 decode (TP4, EAGLE MTP) + 9 frontends. 2 nodes / 8 GPUs.
 # Image: pinned nightly. dynamo@81d0555 wheels from node hostPath /wheels (seeded).
-# Model: /model hostPath (seeded from gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-V4-Pro).
+# Model: /model hostPath (seeded from gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro).
 apiVersion: resource.nvidia.com/v1beta1
 kind: ComputeDomain
 metadata:

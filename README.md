@@ -25,9 +25,9 @@ manifests/tooling carry over unchanged.)
 
 ## Cluster facts (verified 2026-07-28)
 
-- Cluster: `REDACTED-GKE-CLUSTER-OLD`, project `REDACTED-GCS-BUCKET`, **regional** in `us-east5` (nodes in us-east5-c)
+- Cluster: `REDACTED-GKE-CLUSTER-OLD`, project `gke-aishared-gsc-dev`, **regional** in `us-east5` (nodes in us-east5-c)
 - Access: kubeconfig on this VM (`~/.kube/config`); auth via VM service account
-  `alisa-gcs-sa@REDACTED-GCS-BUCKET.iam.gserviceaccount.com`, granted cluster-admin via
+  `alisa-gcs-sa@gke-aishared-gsc-dev.iam.gserviceaccount.com`, granted cluster-admin via
   clusterrolebindings `alisa-sa-admin` (email) + `alisa-sa-admin-id` (numeric ID `103697796161254948063`)
 - GPU nodes: 2 pools (`np-1`, `np-2`), 2 nodes each, machine `a4x-maxgpu-4g-metal`
   - **arm64** (Grace CPU, 144 cores), 983 GB RAM, 4x NVIDIA GB300 per node, ~11 TB local SSD
@@ -226,7 +226,7 @@ python3 dsv4-sweep/gen-dsv4-report.py
 
 ## Model weights (staged 2026-07-30)
 
-**`gs://REDACTED-MODELS-BUCKET/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2/`** — full NVFP4 checkpoint,
+**`gs://alisachen-models/deepseek-ai/DeepSeek-R1-0528-NVFP4-v2/`** — full NVFP4 checkpoint,
 174 objects / 413.3 GB, verified. Uploaded from the M2 decode pod at 3.0 GiB/s
 (`sweeps/stage-model-to-gcs.sh`). Use this (gcsfuse or bulk copy) for ALL future
 deployments — do NOT download from HF again (anonymous 429 rate limits; and dynamo 0.8.1's
@@ -298,6 +298,6 @@ Benchmark driver: `sglang.bench_serving` (or genai-bench) against the in-cluster
 one JSON result per point -> `results/`, then plot goodput vs per-token latency in `analysis/`.
 
 ---
-*Public release note: internal GCS bucket names, project/cluster identifiers, and internal
+*Public release note: project/cluster identifiers and internal
 doc links are redacted (`REDACTED-*` placeholders). The benchmark data, configs, methodology,
 and reports are complete. Full provenance artifacts live in internal storage.*

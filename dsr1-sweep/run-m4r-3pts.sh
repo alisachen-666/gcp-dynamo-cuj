@@ -7,7 +7,7 @@
 set -uo pipefail
 export KUBECONFIG=$HOME/.kube/REDACTED-GKE-CLUSTER.config
 D=$HOME/dsr1-pareto/dsr1-sweep
-DEST="gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs"
+DEST="gs://gke-aishared-gsc-dev/mlperf_results/nvfp4_20260519_run5/logs/logs"
 S=$(mktemp -d)
 PFX="dsr1-m4r"
 
