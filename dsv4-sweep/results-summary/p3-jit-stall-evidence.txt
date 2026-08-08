@@ -1,0 +1,25 @@
+───── WARMUP  (28.9s freeze) ─────
+  JIT> 2026-07-30T11:57:38.905144Z  WARN compile_utils._maybe_compile_deep_gemm_one_type_all: Entering DeepGEMM JIT Pre-Compile session. It may take a long t
+  JIT> 2026-07-30T11:57:38.905189Z  INFO compile_utils._maybe_compile_deep_gemm_one_type_all: Try DeepGEMM JIT Compiling for <TF32_HC_PRENORM_GEMM> N=24, K=2
+  LAST prefill batch before freeze : 2026-07-30T11:57:52.630176Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 1, #new-token: 1792, #cached-token: 0, full token us
+  FIRST prefill batch after freeze : 2026-07-30T11:58:21.574550Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 1, #new-token: 7424, #cached-token: 0, full token us
+  ==> prefill-batch reporter silent for 28.9s
+
+───── LONG-WARM (36.7s freeze, ends 4s before measured start 12:02:13) ─────
+  JIT> 2026-07-30T12:01:05.635491Z  WARN compile_utils._maybe_compile_deep_gemm_one_type_all: Entering DeepGEMM JIT Pre-Compile session. It may take a long t
+  JIT> 2026-07-30T12:01:05.635531Z  INFO compile_utils._maybe_compile_deep_gemm_one_type_all: Try DeepGEMM JIT Compiling for <TF32_HC_PRENORM_GEMM> N=24, K=2
+  LAST prefill batch before freeze : 2026-07-30T12:01:23.439935Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 2, #new-token: 7680, #cached-token: 0, full token us
+  FIRST prefill batch after freeze : 2026-07-30T12:02:00.104365Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 1, #new-token: 7424, #cached-token: 0, full token us
+  ==> prefill-batch reporter silent for 36.7s
+
+───── MEASURED (12.3s freeze) ─────
+  JIT> 2026-07-30T12:07:08.263837Z  WARN compile_utils._maybe_compile_deep_gemm_one_type_all: Entering DeepGEMM JIT Pre-Compile session. It may take a long t
+  JIT> 2026-07-30T12:07:08.263879Z  INFO compile_utils._maybe_compile_deep_gemm_one_type_all: Try DeepGEMM JIT Compiling for <TF32_HC_PRENORM_GEMM> N=24, K=2
+  LAST prefill batch before freeze : 2026-07-30T12:07:08.099144Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 2, #new-token: 8192, #cached-token: 0, full token us
+  FIRST prefill batch after freeze : 2026-07-30T12:07:20.409142Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 2, #new-token: 8192, #cached-token: 0, full token us
+  ==> prefill-batch reporter silent for 12.3s
+
+───── MEASURED (12.5s freeze) ─────
+  LAST prefill batch before freeze : 2026-07-30T12:07:44.799938Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 3, #new-token: 8192, #cached-token: 0, full token us
+  FIRST prefill batch after freeze : 2026-07-30T12:07:57.321560Z  INFO metrics_reporter.report_prefill_stats: Prefill batch, #new-seq: 2, #new-token: 8192, #cached-token: 0, full token us
+  ==> prefill-batch reporter silent for 12.5s

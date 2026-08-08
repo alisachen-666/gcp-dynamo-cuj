@@ -1,0 +1,13 @@
+# Raw sa-bench outputs: per-request/per-token arrays, up to 358 MB per file.
+# Archived in gs://REDACTED-GCS-BUCKET/mlperf_results/nvfp4_20260519_run5/logs/logs/results/
+# Git tracks results-summary/ instead (same metrics + precomputed p90/p95).
+dsr1-sweep/results/
+dsv4-sweep/results/
+dsr1-fp8-sweep/results/
+
+# server/client logs (archived in the same bucket under server-logs/ and client-logs/)
+*.log
+*.out
+
+__pycache__/
+.ipynb_checkpoints/

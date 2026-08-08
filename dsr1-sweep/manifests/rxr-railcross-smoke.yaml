@@ -1,0 +1,240 @@
+# RXR: RAIL-CROSSING REPRO SMOKE — reproduces the m4r rev3 scale failure in minutes,
+# no e2e bench. Mechanism under test: UCX GPU-affine lane selection + LOCAL_SUBNET rail
+# filtering makes rank-ASYMMETRIC KV transfers (prefill GPU i -> decode GPU j, i!=j)
+# unroutable -> "wireup: no remote ep address for lane" -> tcp/ipvlan fallback or stall.
+#
+# Design: Qwen3-4B TP1 disagg pair (loads in minutes), each worker owns a FULL node
+# (4 GPUs + 8 mrdma NICs) so CUDA_VISIBLE_DEVICES picks the physical GPU (= rail pair):
+#   Arm A (repro):   prefill GPU 0 (rails 0/1)  vs decode GPU 2 (rails 4/5)  -> expect failure
+#   Arm B (control): decode GPU 0                                            -> expect rc_mlx5
+#   Arm C (fix?):    GPU 0 vs GPU 2 + UCX_IB_PREFER_NEAREST_DEVICE=n         -> rev4 candidate
+# Arms B/C are applied by run-rxr-smoke.sh via `kubectl set env` (auto-rollout).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsr1-rxr-frontend
+  namespace: dynamo-cloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: dsr1-rxr-frontend}
+  template:
+    metadata:
+      labels: {app: dsr1-rxr-frontend}
+    spec:
+      containers:
+      - name: frontend
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          exec python3 -m dynamo.frontend --http-port=8000
+        env:
+        - {name: DYN_REQUEST_PLANE, value: "nats"}
+        - {name: ETCD_ENDPOINTS, value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"}
+        - {name: NATS_SERVER, value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"}
+        - {name: HF_HOME, value: /tmp/hf}
+        - {name: PYTHONUNBUFFERED, value: "1"}
+        ports: [{containerPort: 8000}]
+        resources:
+          requests: {cpu: "4", memory: 16Gi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsr1-rxr-frontend
+  namespace: dynamo-cloud
+spec:
+  selector: {app: dsr1-rxr-frontend}
+  ports: [{port: 8000, targetPort: 8000}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsr1-rxr-prefill
+  namespace: dynamo-cloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: dsr1-rxr-prefill}
+  template:
+    metadata:
+      labels: {app: dsr1-rxr-prefill}
+    spec:
+      nodeSelector: {cloud.google.com/gke-nodepool: np-3}
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: rdma
+        resourceClaimTemplateName: mrdma-all
+      initContainers:
+      # NCCL gIB plugin (GPUDirect RoCE transport for NCCL) — raw-manifest port of
+      # gpu-recipes network.gibInstall method=apt. Stages /usr/local/gib for the worker.
+      - name: nccl-gib-apt-installer
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -ex
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl gnupg
+          curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/cloud.google.gpg
+          echo 'deb https://packages.cloud.google.com/apt gpudirect-gib-apt main' > /etc/apt/sources.list.d/nccl-gib.list
+          apt-get update
+          apt-get install -y --no-install-recommends nccl-gib
+          test -f /usr/local/gib/scripts/set_nccl_env.sh
+          mkdir -p /target/usr/local/gib
+          cp -a /usr/local/gib/. /target/usr/local/gib/
+        volumeMounts:
+        - {name: gib, mountPath: /target/usr/local/gib}
+      containers:
+      - name: prefill
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          exec python3 -m dynamo.sglang \
+            --model-path Qwen/Qwen3-4B \
+            --served-model-name Qwen/Qwen3-4B \
+            --disaggregation-mode prefill \
+            --trust-remote-code \
+            --disable-radix-cache \
+            --context-length 4096 \
+            --mem-fraction-static 0.80 \
+            --max-running-requests 32 \
+            --load-balance-method round_robin \
+            --disaggregation-bootstrap-port 30001 \
+            --tensor-parallel-size 1 \
+            --disaggregation-transfer-backend nixl \
+            --request-plane nats \
+            --host 0.0.0.0
+        env:
+        - name: LD_LIBRARY_PATH
+          value: "/usr/local/gib/lib64:/usr/local/ucx/lib:/usr/local/ucx/lib/ucx:/opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu:/opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu/plugins:/usr/local/nvidia/lib64"
+        - name: NCCL_DEBUG
+          value: "VERSION"
+        - {name: CUDA_VISIBLE_DEVICES, value: "0"}   # rail pair 0/1
+        - {name: ETCD_ENDPOINTS, value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"}
+        - {name: NATS_SERVER, value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"}
+        - {name: HF_HOME, value: /tmp/hf}
+        - {name: PYTHONUNBUFFERED, value: "1"}
+        - {name: DYN_SKIP_SGLANG_LOG_FORMATTING, value: "1"}
+        - {name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT, value: "100000"}
+        - {name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT, value: "100000"}
+        # UCX under test — identical to m4r rev3
+        - {name: UCX_TLS, value: "cuda_copy,rc_x,tcp"}
+        - {name: UCX_IB_GID_INDEX, value: "5"}
+        - {name: UCX_IB_ROCE_LOCAL_SUBNET, value: "y"}
+        - {name: UCX_IB_ROCE_SUBNET_PREFIX_LEN, value: "64"}
+        - {name: UCX_MEMTYPE_CACHE, value: "n"}
+        - {name: UCX_PROTO_INFO, value: "y"}
+        - {name: UCX_LOG_LEVEL, value: "info"}
+        resources:
+          requests: {nvidia.com/gpu: "4", cpu: "32", memory: 128Gi}
+          limits: {nvidia.com/gpu: "4"}
+          claims: [{name: rdma}]
+        volumeMounts: [{name: dshm, mountPath: /dev/shm}, {name: gib, mountPath: /usr/local/gib, readOnly: true}]
+      volumes:
+      - {name: gib, emptyDir: {}}
+      - {name: dshm, emptyDir: {medium: Memory, sizeLimit: 16Gi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsr1-rxr-decode
+  namespace: dynamo-cloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: dsr1-rxr-decode}
+  template:
+    metadata:
+      labels: {app: dsr1-rxr-decode}
+    spec:
+      nodeSelector: {cloud.google.com/gke-nodepool: np-3}
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: rdma
+        resourceClaimTemplateName: mrdma-all
+      initContainers:
+      # NCCL gIB plugin (GPUDirect RoCE transport for NCCL) — raw-manifest port of
+      # gpu-recipes network.gibInstall method=apt. Stages /usr/local/gib for the worker.
+      - name: nccl-gib-apt-installer
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          set -ex
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl gnupg
+          curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/trusted.gpg.d/cloud.google.gpg
+          echo 'deb https://packages.cloud.google.com/apt gpudirect-gib-apt main' > /etc/apt/sources.list.d/nccl-gib.list
+          apt-get update
+          apt-get install -y --no-install-recommends nccl-gib
+          test -f /usr/local/gib/scripts/set_nccl_env.sh
+          mkdir -p /target/usr/local/gib
+          cp -a /usr/local/gib/. /target/usr/local/gib/
+        volumeMounts:
+        - {name: gib, mountPath: /target/usr/local/gib}
+      containers:
+      - name: decode
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          exec python3 -m dynamo.sglang \
+            --model-path Qwen/Qwen3-4B \
+            --served-model-name Qwen/Qwen3-4B \
+            --disaggregation-mode decode \
+            --trust-remote-code \
+            --disable-radix-cache \
+            --context-length 4096 \
+            --mem-fraction-static 0.80 \
+            --max-running-requests 32 \
+            --load-balance-method round_robin \
+            --disaggregation-bootstrap-port 30001 \
+            --tensor-parallel-size 1 \
+            --disaggregation-transfer-backend nixl \
+            --request-plane nats \
+            --host 0.0.0.0
+        env:
+        - name: LD_LIBRARY_PATH
+          value: "/usr/local/gib/lib64:/usr/local/ucx/lib:/usr/local/ucx/lib/ucx:/opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu:/opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu/plugins:/usr/local/nvidia/lib64"
+        - name: NCCL_DEBUG
+          value: "VERSION"
+        - {name: CUDA_VISIBLE_DEVICES, value: "2"}   # rail pair 4/5 — ARM A: disjoint from prefill
+        - {name: ETCD_ENDPOINTS, value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"}
+        - {name: NATS_SERVER, value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"}
+        - {name: HF_HOME, value: /tmp/hf}
+        - {name: PYTHONUNBUFFERED, value: "1"}
+        - {name: DYN_SKIP_SGLANG_LOG_FORMATTING, value: "1"}
+        - {name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT, value: "100000"}
+        - {name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT, value: "100000"}
+        - {name: UCX_TLS, value: "cuda_copy,rc_x,tcp"}
+        - {name: UCX_IB_GID_INDEX, value: "5"}
+        - {name: UCX_IB_ROCE_LOCAL_SUBNET, value: "y"}
+        - {name: UCX_IB_ROCE_SUBNET_PREFIX_LEN, value: "64"}
+        - {name: UCX_MEMTYPE_CACHE, value: "n"}
+        - {name: UCX_PROTO_INFO, value: "y"}
+        - {name: UCX_LOG_LEVEL, value: "info"}
+        resources:
+          requests: {nvidia.com/gpu: "4", cpu: "32", memory: 128Gi}
+          limits: {nvidia.com/gpu: "4"}
+          claims: [{name: rdma}]
+        volumeMounts: [{name: dshm, mountPath: /dev/shm}, {name: gib, mountPath: /usr/local/gib, readOnly: true}]
+      volumes:
+      - {name: gib, emptyDir: {}}
+      - {name: dshm, emptyDir: {medium: Memory, sizeLimit: 16Gi}}

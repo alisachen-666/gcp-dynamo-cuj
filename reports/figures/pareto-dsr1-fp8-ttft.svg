@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="760" height="420" fill="#fcfcfb" rx="8"/>
+<text x="56" y="20" font-size="12.5" fill="#52514e" font-weight="600">DeepSeek-R1 FP8 — total throughput per GPU (tok/s)</text>
+<text x="680" y="20" font-size="11" fill="#52514e">InferenceX</text>
+<line x1="654" x2="674" y1="16" y2="16" stroke="#eb6834" stroke-width="2"/>
+<circle cx="664" cy="16" r="3.2" fill="#eb6834"/>
+<text x="611" y="20" font-size="11" fill="#52514e">Ours</text>
+<line x1="585" x2="605" y1="16" y2="16" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="595" cy="16" r="3.2" fill="#2a78d6"/>
+<line x1="56" x2="664" y1="374.0" y2="374.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="48" y="377.5" font-size="11" fill="#898781" text-anchor="end">0</text>
+<line x1="56" x2="664" y1="301.9" y2="301.9" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="305.4" font-size="11" fill="#898781" text-anchor="end">2k</text>
+<line x1="56" x2="664" y1="229.8" y2="229.8" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="233.3" font-size="11" fill="#898781" text-anchor="end">4k</text>
+<line x1="56" x2="664" y1="157.7" y2="157.7" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="161.2" font-size="11" fill="#898781" text-anchor="end">6k</text>
+<line x1="56" x2="664" y1="85.6" y2="85.6" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="89.1" font-size="11" fill="#898781" text-anchor="end">8k</text>
+<line x1="158.8" x2="158.8" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="158.8" y="390" font-size="11" fill="#898781" text-anchor="middle">1</text>
+<line x1="263.8" x2="263.8" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="263.8" y="390" font-size="11" fill="#898781" text-anchor="middle">2</text>
+<line x1="402.6" x2="402.6" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="402.6" y="390" font-size="11" fill="#898781" text-anchor="middle">5</text>
+<line x1="507.6" x2="507.6" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="507.6" y="390" font-size="11" fill="#898781" text-anchor="middle">10</text>
+<line x1="612.6" x2="612.6" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="612.6" y="390" font-size="11" fill="#898781" text-anchor="middle">20</text>
+<line x1="56" x2="56" y1="40" y2="374" stroke="#c3c2b7" stroke-width="1"/>
+<text x="360" y="412" font-size="11.5" fill="#898781" text-anchor="middle">TTFT (s, log scale)</text>
+<text x="64" y="54" font-size="11" fill="#898781" text-anchor="start">&#8598; better</text>
+<path d="M76.9 359.2L191.2 340.3L235.9 310.2L286.8 260.2L345.3 179.0" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="76.9" cy="359.2" r="6.5" fill="#fcfcfb"/>
+<circle cx="76.9" cy="359.2" r="4.5" fill="#2a78d6"/>
+<circle cx="191.2" cy="340.3" r="6.5" fill="#fcfcfb"/>
+<circle cx="191.2" cy="340.3" r="4.5" fill="#2a78d6"/>
+<circle cx="235.9" cy="310.2" r="6.5" fill="#fcfcfb"/>
+<circle cx="235.9" cy="310.2" r="4.5" fill="#2a78d6"/>
+<circle cx="286.8" cy="260.2" r="6.5" fill="#fcfcfb"/>
+<circle cx="286.8" cy="260.2" r="4.5" fill="#2a78d6"/>
+<circle cx="345.3" cy="179.0" r="6.5" fill="#fcfcfb"/>
+<circle cx="345.3" cy="179.0" r="4.5" fill="#2a78d6"/>
+<path d="M93.0 359.4L118.7 350.6L221.0 341.0L257.3 312.2L308.7 262.5L362.3 178.7L404.2 103.3L643.1 64.7" fill="none" stroke="#eb6834" stroke-width="2"/>
+<circle cx="93.0" cy="359.4" r="6.5" fill="#fcfcfb"/>
+<circle cx="93.0" cy="359.4" r="4.5" fill="#eb6834"/>
+<circle cx="118.7" cy="350.6" r="6.5" fill="#fcfcfb"/>
+<circle cx="118.7" cy="350.6" r="4.5" fill="#eb6834"/>
+<circle cx="221.0" cy="341.0" r="6.5" fill="#fcfcfb"/>
+<circle cx="221.0" cy="341.0" r="4.5" fill="#eb6834"/>
+<circle cx="257.3" cy="312.2" r="6.5" fill="#fcfcfb"/>
+<circle cx="257.3" cy="312.2" r="4.5" fill="#eb6834"/>
+<circle cx="308.7" cy="262.5" r="6.5" fill="#fcfcfb"/>
+<circle cx="308.7" cy="262.5" r="4.5" fill="#eb6834"/>
+<circle cx="362.3" cy="178.7" r="6.5" fill="#fcfcfb"/>
+<circle cx="362.3" cy="178.7" r="4.5" fill="#eb6834"/>
+<circle cx="404.2" cy="103.3" r="6.5" fill="#fcfcfb"/>
+<circle cx="404.2" cy="103.3" r="4.5" fill="#eb6834"/>
+<circle cx="643.1" cy="64.7" r="6.5" fill="#fcfcfb"/>
+<circle cx="643.1" cy="64.7" r="4.5" fill="#eb6834"/>
+<text x="653.1" y="68.7" font-size="11.5" font-weight="600" fill="#52514e">InferenceX</text>
+<text x="355.3" y="183.0" font-size="11.5" font-weight="600" fill="#52514e">Ours</text>
+</svg>

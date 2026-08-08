@@ -1,0 +1,12 @@
+{"_source":"InferenceX dashboard, run date 2026-06-03, GB300 NVL72 Dynamo-SGLang MTP, FP4, image nightly-dev-20260527-14f81a67",
+ "_convention":"in_per_gpu = input tok/s / prefill GPUs; out_per_gpu = output tok/s / decode GPUs; total_per_gpu = (in+out) aggregate / total GPUs (verified consistent)",
+ "points":[
+  {"conc":8192,"total_gpus":40,"prefill_gpus":32,"decode_gpus":8,"pworkers":8,"dtp":8,"interactivity":26.967,"total_per_gpu":12233.463,"in_per_gpu":13593.026,"out_per_gpu":6795.214},
+  {"conc":4096,"total_gpus":32,"prefill_gpus":24,"decode_gpus":8,"pworkers":6,"dtp":8,"interactivity":44.118,"total_per_gpu":11633.94,"in_per_gpu":13788.837,"out_per_gpu":5169.251},
+  {"conc":1024,"total_gpus":24,"prefill_gpus":16,"decode_gpus":8,"pworkers":4,"dtp":8,"interactivity":68.267,"total_per_gpu":9746.095,"in_per_gpu":12994.656,"out_per_gpu":3248.973},
+  {"conc":512,"total_gpus":16,"prefill_gpus":8,"decode_gpus":8,"pworkers":2,"dtp":8,"interactivity":87.095,"total_per_gpu":7294.566,"in_per_gpu":12968.234,"out_per_gpu":1620.898},
+  {"conc":256,"total_gpus":12,"prefill_gpus":4,"decode_gpus":8,"pworkers":1,"dtp":8,"interactivity":104.537,"total_per_gpu":5249.636,"in_per_gpu":13998.675,"out_per_gpu":875.117},
+  {"conc":256,"total_gpus":20,"prefill_gpus":4,"decode_gpus":16,"pworkers":1,"dtp":16,"interactivity":136.294,"total_per_gpu":3055.61,"in_per_gpu":13580.144,"out_per_gpu":424.476},
+  {"conc":64,"total_gpus":28,"prefill_gpus":4,"decode_gpus":24,"pworkers":1,"dtp":4,"dworkers":6,"interactivity":146.499,"total_per_gpu":1599.354,"in_per_gpu":9953.585,"out_per_gpu":206.982},
+  {"conc":32,"total_gpus":28,"prefill_gpus":4,"decode_gpus":24,"pworkers":1,"dtp":4,"dworkers":6,"interactivity":169.251,"total_per_gpu":954.249,"in_per_gpu":5932.854,"out_per_gpu":124.482},
+  {"conc":8,"total_gpus":28,"prefill_gpus":4,"decode_gpus":24,"pworkers":1,"dtp":4,"dworkers":6,"interactivity":202.666,"total_per_gpu":327.595,"in_per_gpu":2035.409,"out_per_gpu":42.96}]}

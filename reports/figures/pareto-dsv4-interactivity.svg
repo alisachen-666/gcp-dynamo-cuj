@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="760" height="420" fill="#fcfcfb" rx="8"/>
+<text x="56" y="20" font-size="12.5" fill="#52514e" font-weight="600">DeepSeek-V4-Pro FP4 — total throughput per GPU (tok/s)</text>
+<text x="674" y="20" font-size="11" fill="#52514e">drift rerun</text>
+<line x1="648" x2="668" y1="16" y2="16" stroke="#2a78d6" stroke-width="2" stroke-dasharray="4 3"/>
+<circle cx="658" cy="16" r="3.2" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="566" y="20" font-size="11" fill="#52514e">InferenceX</text>
+<line x1="540" x2="560" y1="16" y2="16" stroke="#eb6834" stroke-width="2"/>
+<circle cx="550" cy="16" r="3.2" fill="#eb6834"/>
+<text x="497" y="20" font-size="11" fill="#52514e">Ours</text>
+<line x1="471" x2="491" y1="16" y2="16" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="481" cy="16" r="3.2" fill="#2a78d6"/>
+<line x1="56" x2="664" y1="374.0" y2="374.0" stroke="#c3c2b7" stroke-width="1"/>
+<text x="48" y="377.5" font-size="11" fill="#898781" text-anchor="end">0</text>
+<line x1="56" x2="664" y1="247.6" y2="247.6" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="251.1" font-size="11" fill="#898781" text-anchor="end">5k</text>
+<line x1="56" x2="664" y1="121.2" y2="121.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="48" y="124.7" font-size="11" fill="#898781" text-anchor="end">10k</text>
+<line x1="153.7" x2="153.7" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="153.7" y="390" font-size="11" fill="#898781" text-anchor="middle">50</text>
+<line x1="283.2" x2="283.2" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="283.2" y="390" font-size="11" fill="#898781" text-anchor="middle">100</text>
+<line x1="412.8" x2="412.8" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="412.8" y="390" font-size="11" fill="#898781" text-anchor="middle">150</text>
+<line x1="542.4" x2="542.4" y1="40" y2="374" stroke="#e1e0d9" stroke-width="1"/>
+<text x="542.4" y="390" font-size="11" fill="#898781" text-anchor="middle">200</text>
+<line x1="56" x2="56" y1="40" y2="374" stroke="#c3c2b7" stroke-width="1"/>
+<text x="360" y="412" font-size="11.5" fill="#898781" text-anchor="middle">Interactivity (tok/s/user)</text>
+<text x="656" y="54" font-size="11" fill="#898781" text-anchor="end">&#8599; better</text>
+<path d="M132.9 80.9L179.9 126.5L220.0 186.3L265.1 240.9L336.9 296.7L603.5 368.5" fill="none" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="132.9" cy="80.9" r="6.5" fill="#fcfcfb"/>
+<circle cx="132.9" cy="80.9" r="4.5" fill="#2a78d6"/>
+<circle cx="179.9" cy="126.5" r="6.5" fill="#fcfcfb"/>
+<circle cx="179.9" cy="126.5" r="4.5" fill="#2a78d6"/>
+<circle cx="220.0" cy="186.3" r="6.5" fill="#fcfcfb"/>
+<circle cx="220.0" cy="186.3" r="4.5" fill="#2a78d6"/>
+<circle cx="265.1" cy="240.9" r="6.5" fill="#fcfcfb"/>
+<circle cx="265.1" cy="240.9" r="4.5" fill="#2a78d6"/>
+<circle cx="336.9" cy="296.7" r="6.5" fill="#fcfcfb"/>
+<circle cx="336.9" cy="296.7" r="4.5" fill="#2a78d6"/>
+<circle cx="603.5" cy="368.5" r="6.5" fill="#fcfcfb"/>
+<circle cx="603.5" cy="368.5" r="4.5" fill="#2a78d6"/>
+<path d="M93.3 64.7L130.8 79.9L179.8 127.6L222.7 189.6L262.8 241.3L331.0 296.8L367.9 333.6L419.3 349.9L493.5 365.7L626.7 369.1" fill="none" stroke="#eb6834" stroke-width="2"/>
+<circle cx="93.3" cy="64.7" r="6.5" fill="#fcfcfb"/>
+<circle cx="93.3" cy="64.7" r="4.5" fill="#eb6834"/>
+<circle cx="130.8" cy="79.9" r="6.5" fill="#fcfcfb"/>
+<circle cx="130.8" cy="79.9" r="4.5" fill="#eb6834"/>
+<circle cx="179.8" cy="127.6" r="6.5" fill="#fcfcfb"/>
+<circle cx="179.8" cy="127.6" r="4.5" fill="#eb6834"/>
+<circle cx="222.7" cy="189.6" r="6.5" fill="#fcfcfb"/>
+<circle cx="222.7" cy="189.6" r="4.5" fill="#eb6834"/>
+<circle cx="262.8" cy="241.3" r="6.5" fill="#fcfcfb"/>
+<circle cx="262.8" cy="241.3" r="4.5" fill="#eb6834"/>
+<circle cx="331.0" cy="296.8" r="6.5" fill="#fcfcfb"/>
+<circle cx="331.0" cy="296.8" r="4.5" fill="#eb6834"/>
+<circle cx="367.9" cy="333.6" r="6.5" fill="#fcfcfb"/>
+<circle cx="367.9" cy="333.6" r="4.5" fill="#eb6834"/>
+<circle cx="419.3" cy="349.9" r="6.5" fill="#fcfcfb"/>
+<circle cx="419.3" cy="349.9" r="4.5" fill="#eb6834"/>
+<circle cx="493.5" cy="365.7" r="6.5" fill="#fcfcfb"/>
+<circle cx="493.5" cy="365.7" r="4.5" fill="#eb6834"/>
+<circle cx="626.7" cy="369.1" r="6.5" fill="#fcfcfb"/>
+<circle cx="626.7" cy="369.1" r="4.5" fill="#eb6834"/>
+<path d="M124.6 120.0L142.0 86.0L180.7 131.6L233.4 223.2" fill="none" stroke="#2a78d6" stroke-width="2" stroke-dasharray="5 4" opacity="0.75"/>
+<circle cx="124.6" cy="120.0" r="6.5" fill="#fcfcfb"/>
+<circle cx="124.6" cy="120.0" r="4.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="142.0" cy="86.0" r="6.5" fill="#fcfcfb"/>
+<circle cx="142.0" cy="86.0" r="4.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="180.7" cy="131.6" r="6.5" fill="#fcfcfb"/>
+<circle cx="180.7" cy="131.6" r="4.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="233.4" cy="223.2" r="6.5" fill="#fcfcfb"/>
+<circle cx="233.4" cy="223.2" r="4.5" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<text x="243.4" y="227.2" font-size="11.5" font-weight="600" fill="#52514e">drift rerun</text>
+<text x="613.5" y="372.5" font-size="11.5" font-weight="600" fill="#52514e">Ours</text>
+<text x="636.7" y="387.5" font-size="11.5" font-weight="600" fill="#52514e">InferenceX</text>
+</svg>

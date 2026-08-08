@@ -1,0 +1,216 @@
+From 3282fdeba5b7122a09dc191a486bca03433dc123 Mon Sep 17 00:00:00 2001
+From: yunzhoul-nv <232973175+yunzhoul-nv@users.noreply.github.com>
+Date: Wed, 11 Feb 2026 16:44:34 -0800
+Subject: [PATCH] [NV] Updates SGLang DSR1-FP4 GB300 1k1k + 8k1k configurations
+ (STP only) (#636)
+
+* adds common changes
+
+* updates how we modify the recipe
+
+* updates the model for FP4
+
+* uses local recipe instead
+
+* adds gb300 1k1k and 8k1k configs
+
+* minimize change
+
+* remove torchao
+
+* slight modification to trigger run sweep...
+
+* update container and conc list
+
+---------
+
+Co-authored-by: Elnifio <elnifio0519@gmail.com>
+---
+ .github/configs/nvidia-master.yaml | 114 +++++++++++++++++++++++++++++
+ perf-changelog.yaml                |   9 +++
+ runners/launch_gb300-nv.sh         |   9 ++-
+ 3 files changed, 131 insertions(+), 1 deletion(-)
+
+diff --git a/.github/configs/nvidia-master.yaml b/.github/configs/nvidia-master.yaml
+index 3407e7b9c7..f73a006c06 100644
+--- a/.github/configs/nvidia-master.yaml
++++ b/.github/configs/nvidia-master.yaml
+@@ -5236,6 +5236,120 @@ dsr1-fp4-gb300-dynamo-trt:
+         ep: 16
+         dp-attn: true
+ 
++dsr1-fp4-gb300-dynamo-sglang:
++  image: "lmsysorg/sglang:v0.5.8.post1-cu130-runtime"
++  model: nvidia/DeepSeek-R1-0528-NVFP4-v2
++  model-prefix: dsr1
++  runner: gb300
++  precision: fp4
++  framework: dynamo-sglang
++  multinode: true
++  disagg: true
++  seq-len-configs:
++  # 1k1k configurations
++  - isl: 1024
++    osl: 1024
++    search-space:
++    # Low latency (1 prefill node, 2 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 4, 8, 32 ]
++      prefill:
++        num-worker: 1
++        tp: 4
++        ep: 1
++        dp-attn: false
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/1k1k/low_latency.yaml"
++      decode:
++        num-worker: 2
++        tp: 4
++        ep: 1
++        dp-attn: false
++
++    # Mid curve (4 prefill nodes, 8 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 512, 2048, 4096, 8192 ]
++      prefill:
++        num-worker: 4
++        tp: 4
++        ep: 4
++        dp-attn: true
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/1k1k/mid_curve.yaml"
++      decode:
++        num-worker: 1
++        tp: 32
++        ep: 32
++        dp-attn: true
++
++    # Max throughput (4 prefill nodes, 12 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 512, 2048, 4096, 8192 ]
++      prefill:
++        num-worker: 4
++        tp: 4
++        ep: 4
++        dp-attn: true
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/1k1k/max_tpt.yaml"
++      decode:
++        num-worker: 1
++        tp: 48
++        ep: 48
++        dp-attn: true
++
++  # 8k1k configurations
++  - isl: 8192
++    osl: 1024
++    search-space:
++    # Low latency (1 prefill node, 4 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 4, 8, 32, 64 ]
++      prefill:
++        num-worker: 1
++        tp: 4
++        ep: 1
++        dp-attn: false
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/8k1k/low_latency.yaml"
++      decode:
++        num-worker: 4
++        tp: 4
++        ep: 1
++        dp-attn: false
++
++    # Mid curve (6 prefill nodes, 12 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 512, 2048, 4096 ]
++      prefill:
++        num-worker: 6
++        tp: 4
++        ep: 1
++        dp-attn: false
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/8k1k/mid_curve.yaml"
++      decode:
++        num-worker: 1
++        tp: 48
++        ep: 48
++        dp-attn: true
++
++    # Max throughput (10 prefill nodes, 8 decode nodes)
++    - spec-decoding: "none"
++      conc-list: [ 2048 ]
++      prefill:
++        num-worker: 10
++        tp: 4
++        ep: 1
++        dp-attn: false
++        additional-settings:
++        - "CONFIG_FILE=recipes/gb300-fp4/8k1k/max_tpt.yaml"
++      decode:
++        num-worker: 1
++        tp: 32
++        ep: 32
++        dp-attn: true
++
+ dsr1-fp8-gb300-dynamo-trt:
+   image: nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:0.8.1.post2
+   model: deepseek-ai/DeepSeek-R1-0528
+diff --git a/perf-changelog.yaml b/perf-changelog.yaml
+index 7e04cf8a8e..567de098c4 100644
+--- a/perf-changelog.yaml
++++ b/perf-changelog.yaml
+@@ -535,3 +535,12 @@
+     - "Image: lmsysorg/sglang:v0.5.8.post1-cu130"
+   pr-link: https://github.com/InferenceMAX/InferenceMAX/pull/683
+   
++- config-keys:
++    - dsr1-fp4-gb300-dynamo-sglang
++  description:
++    - "Add GB300 FP4 Dynamo SGLang disaggregated multinode configuration"
++    - "Image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime"
++    - "Recipes sourced from srt-slurm repo (recipes/gb300-fp4/ folder)"
++    - "Add 1k1k configurations: low-latency (1P2D), mid-curve (4P8D), max-tpt (4P12D)"
++    - "Add 8k1k configurations: low-latency (1P4D), mid-curve (6P12D), max-tpt (10P8D)"
++  pr-link: https://github.com/InferenceMAX/InferenceMAX/pull/636
+diff --git a/runners/launch_gb300-nv.sh b/runners/launch_gb300-nv.sh
+index 80df5347e1..a7709fdb84 100644
+--- a/runners/launch_gb300-nv.sh
++++ b/runners/launch_gb300-nv.sh
+@@ -52,7 +52,11 @@ export ISL="$ISL"
+ export OSL="$OSL"
+ 
+ SQUASH_FILE="/home/sa-shared/squash/$(echo "$IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
++NGINX_IMAGE="nginx:1.27.4"
++NGINX_SQUASH_FILE="/home/sa-shared/squash/$(echo "$NGINX_IMAGE" | sed 's/[\/:@#]/_/g').sqsh"
++
+ srun --partition=$SLURM_PARTITION --exclusive --time=180 bash -c "enroot import -o $SQUASH_FILE docker://$IMAGE"
++srun --partition=$SLURM_PARTITION --exclusive --time=180 bash -c "enroot import -o $NGINX_SQUASH_FILE docker://$NGINX_IMAGE"
+ 
+ # Create srtslurm.yaml for srtctl
+ echo "Creating srtslurm.yaml configuration..."
+@@ -73,6 +77,7 @@ model_paths:
+ containers:
+   dynamo-trtllm: ${SQUASH_FILE}
+   dynamo-sglang: ${SQUASH_FILE}
++  nginx-sqsh: ${NGINX_SQUASH_FILE}
+ use_segment_sbatch_directive: false
+ EOF
+ 
+@@ -83,7 +88,9 @@ echo "Running make setup..."
+ make setup ARCH=aarch64
+ 
+ echo "Submitting job with srtctl..."
++
+ SRTCTL_OUTPUT=$(srtctl apply -f "$CONFIG_FILE" --tags "gb300,${MODEL_PREFIX},${PRECISION},${ISL}x${OSL},infmax-$(date +%Y%m%d)" 2>&1)
++
+ echo "$SRTCTL_OUTPUT"
+ 
+ # Extract JOB_ID from srtctl output
+@@ -169,4 +176,4 @@ echo "All result files processed"
+ echo "Cleaning up..."
+ deactivate 2>/dev/null || true
+ rm -rf .venv
+-echo "Cleanup complete"
+\ No newline at end of file
++echo "Cleanup complete"

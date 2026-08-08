@@ -1,0 +1,119 @@
+# Smoke 2: single-node aggregated DSR1 NVFP4 TP=4 + short sa-bench 8k1k run.
+# Validates: NVFP4 checkpoint loads on GB300, modelopt_fp4 + trtllm_mla + flashinfer
+# kernels work, and produces first single-node perf numbers with InferenceX-compatible
+# metrics. Downloads ~420 GB from HF to local SSD (expect 30-60 min before server is up).
+# NOT the mid_curve architecture (no disagg/Dynamo/wide-EP) - kernel/model smoke only.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dsr1-smoke-fp4-tp4
+  namespace: default
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dsr1-smoke-fp4-tp4
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: kubernetes.io/arch
+        operator: Equal
+        value: arm64
+        effect: NoSchedule
+      containers:
+      - name: serve-and-bench
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          python3 -c "import aiohttp, numpy, pandas, datasets, PIL, tqdm, transformers" 2>/dev/null \
+            || pip install --quiet aiohttp numpy pandas datasets Pillow tqdm transformers
+          echo "===== launch DSR1 NVFP4 TP=4 server (weights download ~420GB on first run) ====="
+          python3 -m sglang.launch_server \
+            --model-path nvidia/DeepSeek-R1-0528-NVFP4-v2 \
+            --served-model-name deepseek-ai/DeepSeek-R1 \
+            --trust-remote-code \
+            --tp 4 \
+            --quantization modelopt_fp4 \
+            --kv-cache-dtype fp8_e4m3 \
+            --attention-backend trtllm_mla \
+            --moe-runner-backend flashinfer_trtllm \
+            --disable-radix-cache \
+            --disable-chunked-prefix-cache \
+            --disable-shared-experts-fusion \
+            --context-length 9600 \
+            --mem-fraction-static 0.85 \
+            --host 127.0.0.1 --port 30000 > /tmp/server.log 2>&1 &
+          # up to ~90 min for download + load
+          for i in $(seq 1 540); do
+            curl -sf http://127.0.0.1:30000/health >/dev/null 2>&1 && break
+            sleep 10
+            if (( i % 30 == 0 )); then echo "waiting for server... ($((i/6)) min)"; tail -3 /tmp/server.log; fi
+          done
+          curl -sf http://127.0.0.1:30000/health || { echo "SERVER FAILED"; tail -120 /tmp/server.log; exit 1; }
+          echo "server healthy"
+          echo "===== sa-bench 8k1k, small concurrencies (single-node scale) ====="
+          cp /sa-bench/*.py /tmp/ && cd /tmp && mkdir -p /tmp/results
+          for conc in 4 16 64; do
+            python3 -u benchmark_serving.py \
+              --model deepseek-ai/DeepSeek-R1 --tokenizer nvidia/DeepSeek-R1-0528-NVFP4-v2 \
+              --host 127.0.0.1 --port 30000 \
+              --backend dynamo --endpoint /v1/completions \
+              --disable-tqdm \
+              --dataset-name random \
+              --num-prompts $((conc * 4)) \
+              --random-input-len 8192 --random-output-len 1024 --random-range-ratio 0.8 \
+              --ignore-eos \
+              --request-rate inf \
+              --percentile-metrics ttft,tpot,itl,e2el \
+              --max-concurrency ${conc} \
+              --trust-remote-code \
+              --save-result --result-dir /tmp/results \
+              --result-filename results_concurrency_${conc}_gpus_4.json
+          done
+          echo "===== results ====="
+          for f in /tmp/results/*.json; do echo "--- $f"; cat "$f"; echo ""; done
+          echo "FP4 SMOKE PASSED"
+        env:
+        - name: HF_HOME
+          value: /data/hf
+        - name: HF_HUB_ENABLE_HF_TRANSFER
+          value: "1"
+        - name: SGLANG_NVFP4_CKPT_FP8_GEMM_IN_ATTN
+          value: "1"
+        - name: SGLANG_PER_TOKEN_GROUP_QUANT_8BIT_V2
+          value: "1"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "64"
+            memory: 512Gi
+          limits:
+            nvidia.com/gpu: "4"
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+        - name: sa-bench
+          mountPath: /sa-bench
+        - name: hf-cache
+          mountPath: /data/hf
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Gi
+      - name: sa-bench
+        configMap:
+          name: sa-bench-scripts
+      - name: hf-cache
+        emptyDir: {}

@@ -1,0 +1,92 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dsr1-smoke-tiny-bench
+  namespace: default
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dsr1-smoke-tiny-bench
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: kubernetes.io/arch
+        operator: Equal
+        value: arm64
+        effect: NoSchedule
+      containers:
+      - name: serve-and-bench
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          echo "===== ensure sa-bench deps ====="
+          python3 -c "import aiohttp, numpy, pandas, datasets, PIL, tqdm, transformers" 2>/dev/null \
+            || pip install --quiet aiohttp numpy pandas datasets Pillow tqdm transformers
+          echo "===== launch tiny sglang server (1 GPU) ====="
+          python3 -m sglang.launch_server \
+            --model-path Qwen/Qwen3-4B \
+            --host 127.0.0.1 --port 30000 \
+            --mem-fraction-static 0.8 > /tmp/server.log 2>&1 &
+          for i in $(seq 1 120); do
+            curl -sf http://127.0.0.1:30000/health >/dev/null 2>&1 && break
+            sleep 5
+          done
+          curl -sf http://127.0.0.1:30000/health || { echo "SERVER FAILED"; tail -80 /tmp/server.log; exit 1; }
+          echo "server healthy"
+          echo "===== run sa-bench (mirrors srt-slurm bench.sh invocation) ====="
+          cp /sa-bench/*.py /tmp/ && cd /tmp && mkdir -p /tmp/results
+          python3 -u benchmark_serving.py \
+            --model Qwen/Qwen3-4B --tokenizer Qwen/Qwen3-4B \
+            --host 127.0.0.1 --port 30000 \
+            --backend dynamo --endpoint /v1/completions \
+            --disable-tqdm \
+            --dataset-name random \
+            --num-prompts 64 \
+            --random-input-len 1024 --random-output-len 128 --random-range-ratio 0.8 \
+            --ignore-eos \
+            --request-rate inf \
+            --percentile-metrics ttft,tpot,itl,e2el \
+            --max-concurrency 8 \
+            --trust-remote-code \
+            --save-result --result-dir /tmp/results --result-filename smoke.json
+          echo "===== result json ====="
+          cat /tmp/results/smoke.json
+          echo ""
+          echo "SMOKE BENCH PASSED"
+        env:
+        - name: HF_HOME
+          value: /data/hf
+        resources:
+          requests:
+            nvidia.com/gpu: "1"
+            cpu: "16"
+            memory: 64Gi
+          limits:
+            nvidia.com/gpu: "1"
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+        - name: sa-bench
+          mountPath: /sa-bench
+        - name: hf-cache
+          mountPath: /data/hf
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 16Gi
+      - name: sa-bench
+        configMap:
+          name: sa-bench-scripts
+      - name: hf-cache
+        emptyDir: {}
