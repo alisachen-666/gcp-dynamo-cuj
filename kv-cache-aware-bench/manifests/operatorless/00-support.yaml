@@ -1,0 +1,129 @@
+# Supporting resources for operator-less kv-bench arms (namespace dynamo-cloud).
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: kv-bench-compute-domain
+  namespace: dynamo-cloud
+spec:
+  numNodes: 0
+  channel:
+    resourceClaimTemplate:
+      name: kv-bench-compute-domain-channel
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache
+  namespace: dynamo-cloud
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 800Gi
+  storageClassName: gcsfusecsi-serving
+---
+# Downloads Kimi-K2.5-NVFP4 (no Eagle3 — speculative decoding disabled for this study)
+# into the shared model-cache PVC at /model-cache/Kimi-K2.5-NVFP4.
+# Source: public HF bucket mirror (no token needed):
+#   https://huggingface.co/buckets/Alisa233/Kimi-K2.5-NVFP4-bucket (590.9 GB, 140 files)
+# Runs on a GPU node (983 GB RAM, fast NICs).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: model-download
+  namespace: dynamo-cloud
+spec:
+  backoffLimit: 3
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: model-download
+      annotations:
+        gke-gcsfuse/volumes: "true"
+        gke-gcsfuse/ephemeral-storage-limit: 700Gi
+    spec:
+      restartPolicy: Never
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+        - key: kubernetes.io/arch
+          operator: Equal
+          value: arm64
+          effect: NoSchedule
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: model-download
+          image: python:3.10-slim
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["python3", "-u", "-c"]
+          env:
+            - name: BUCKET
+              value: Alisa233/Kimi-K2.5-NVFP4-bucket
+            - name: DEST
+              value: /model-cache/alisachen/Kimi-K2.5-NVFP4
+            - name: WORKERS
+              value: "8"
+          args:
+            - |
+              import json, os, pathlib, urllib.request, concurrent.futures, sys
+
+              bucket, dest = os.environ["BUCKET"], pathlib.Path(os.environ["DEST"])
+              api = f"https://huggingface.co/api/buckets/{bucket}/tree"
+              base = f"https://huggingface.co/buckets/{bucket}/resolve"
+              entries = [e for e in json.load(urllib.request.urlopen(api))
+                         if e["type"] == "file"]
+              total = sum(e["size"] for e in entries)
+              print(f"{len(entries)} files, {total/1e9:.1f} GB -> {dest}", flush=True)
+              dest.mkdir(parents=True, exist_ok=True)
+
+              def fetch(e):
+                  path, size = e["path"], e["size"]
+                  out = dest / path
+                  out.parent.mkdir(parents=True, exist_ok=True)
+                  if out.exists() and out.stat().st_size == size:
+                      return f"skip {path}"
+                  tmp = out.with_suffix(out.suffix + ".part")
+                  for attempt in range(4):
+                      try:
+                          with urllib.request.urlopen(f"{base}/{path}") as r, open(tmp, "wb") as w:
+                              while chunk := r.read(1 << 22):
+                                  w.write(chunk)
+                          if tmp.stat().st_size != size:
+                              raise IOError(f"size mismatch {tmp.stat().st_size} != {size}")
+                          tmp.rename(out)
+                          return f"ok   {path} ({size/1e9:.2f} GB)"
+                      except Exception as ex:
+                          print(f"retry {path} ({attempt+1}/4): {ex}", flush=True)
+                  raise SystemExit(f"FAILED after retries: {path}")
+
+              with concurrent.futures.ThreadPoolExecutor(int(os.environ["WORKERS"])) as ex:
+                  for msg in ex.map(fetch, entries):
+                      print(msg, flush=True)
+
+              done = sum(1 for e in entries if (dest / e["path"]).stat().st_size == e["size"])
+              print(f"verified {done}/{len(entries)} files complete", flush=True)
+              sys.exit(0 if done == len(entries) else 1)
+          resources:
+            requests:
+              cpu: "8"
+              memory: "32Gi"
+            limits:
+              cpu: "16"
+              memory: "64Gi"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /model-cache
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache

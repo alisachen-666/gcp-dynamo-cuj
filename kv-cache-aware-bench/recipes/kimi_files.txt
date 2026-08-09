@@ -1,0 +1,15 @@
+recipes/kimi-k2.5/README.md
+recipes/kimi-k2.5/model-cache/compute-domain.yaml
+recipes/kimi-k2.5/model-cache/model-cache.yaml
+recipes/kimi-k2.5/model-cache/model-download.yaml
+recipes/kimi-k2.5/tokenspeed/agg/nvidia/Dockerfile
+recipes/kimi-k2.5/tokenspeed/agg/nvidia/README.md
+recipes/kimi-k2.5/tokenspeed/agg/nvidia/deploy.yaml
+recipes/kimi-k2.5/trtllm/agg-eagle-kv-router/deploy.yaml
+recipes/kimi-k2.5/trtllm/agg-eagle-kv-router/perf.yaml
+recipes/kimi-k2.5/trtllm/agg-eagle-round-robin/deploy.yaml
+recipes/kimi-k2.5/trtllm/agg-eagle-round-robin/perf.yaml
+recipes/kimi-k2.5/trtllm/agg-round-robin/deploy.yaml
+recipes/kimi-k2.5/trtllm/agg-round-robin/perf.yaml
+recipes/kimi-k2.5/trtllm/disagg-eagle-kv-router/deploy.yaml
+recipes/kimi-k2.5/trtllm/disagg-eagle-kv-router/perf.yaml

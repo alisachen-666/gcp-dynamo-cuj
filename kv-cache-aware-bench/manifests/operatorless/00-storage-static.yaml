@@ -1,0 +1,43 @@
+# Static gcsfuse binding for the model cache (dynamic gcsfuse provisioning is
+# non-functional on this cluster — provisioner never binds).
+# Bucket: gs://alisachen-models (US-CENTRAL1), read via Workload Identity grant to
+# ns/dynamo-cloud/sa/default. Layout:
+#   nvidia/Kimi-K2.5-NVFP4/   <- weights (staged from HF bucket mirror)
+#   traces/                   <- AIPerf traces + smoke slices
+#   perf/                     <- benchmark artifacts (written by bench jobs; needs objectAdmin
+#                                if jobs write here — see kv-bench objectUser grant)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: model-cache-gcs
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: 800Gi
+  storageClassName: ""
+  mountOptions:
+    - implicit-dirs
+    - metadata-cache:ttl-secs:600
+    - file-cache:max-size-mb:-1
+    - file-cache:cache-file-for-range-read:true
+  csi:
+    driver: gcsfuse.csi.storage.gke.io
+    volumeHandle: alisachen-models
+  claimRef:
+    name: model-cache
+    namespace: dynamo-cloud
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache
+  namespace: dynamo-cloud
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 800Gi
+  storageClassName: ""
+  volumeName: model-cache-gcs

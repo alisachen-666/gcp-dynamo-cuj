@@ -1,0 +1,74 @@
+{
+  "locked_at": "2026-08-08T09:00:00Z",
+  "cluster": {
+    "name": "cmcs-a4xmax",
+    "project": "cmcs-a4x-max",
+    "location": "us-east5",
+    "endpoint": "https://136.83.38.72",
+    "machine_type": "a4x-maxgpu-4g-metal (GB300 NVL72, 4 GPUs/node, arm64 Grace)",
+    "gpu_nodes": 72,
+    "total_gpus": 288,
+    "node_pools": ["np-1", "np-2", "np-3", "np-4"],
+    "gpu_node_taints": [
+      "nvidia.com/gpu=present:NoSchedule",
+      "kubernetes.io/arch=arm64:NoSchedule"
+    ]
+  },
+  "images": {
+    "tensorrtllm_runtime": {
+      "ref": "nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:1.3.1",
+      "digest": "sha256:9bccb4fed7055022e24a138d466eae3dcdc3918a9206d6449c6b420f483390cf"
+    }
+  },
+  "dynamo": {
+    "platform_chart": "dynamo-platform-1.3.1.tgz (helm.ngc.nvidia.com/nvidia/ai-dynamo)",
+    "crds": "ai-dynamo/dynamo tag v1.3.1 deploy/operator/config/crd/bases (applied 2026-08-08)",
+    "recipe_commit": "12356a1d03d352e00129717d97a90afbb3b39106",
+    "recipe_path": "recipes/kimi-k2.5",
+    "etcd": "dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379 (pre-existing)",
+    "nats": "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222 (pre-existing)"
+  },
+  "model": {
+    "primary": "nvidia/Kimi-K2.5-NVFP4",
+    "weights_source": "https://huggingface.co/buckets/Alisa233/Kimi-K2.5-NVFP4-bucket (public mirror, 590.9 GB / 140 files; verified config matches: KimiK25ForConditionalGeneration, 61 layers, 384 experts, 262144 ctx, FP4) — staged to /model-cache/Kimi-K2.5-NVFP4; no HF token required",
+    "speculative": "DISABLED (Eagle3 stripped from all arms per 2026-08-08 decision — nvfp4 base only)",
+    "architecture": "KimiK25ForConditionalGeneration, 61 layers, 384 experts topk=8, MLA kv_lora_rank=512, context=262144",
+    "quantization": "nvfp4, kv_cache fp8"
+  },
+  "aiconfigurator": {
+    "version": "0.10.0",
+    "backend": "trtllm",
+    "perf_db_version": "1.3.0rc15",
+    "support_check": {
+      "system": "gb300",
+      "aggregated": "PASS",
+      "disaggregated": "PASS",
+      "checked_at": "2026-08-08"
+    }
+  },
+  "trace": {
+    "dataset": "semianalysisai/cc-traces-weka-062126-256k",
+    "file": "data/weka_256k_trace.jsonl.gz",
+    "md5": "3385bed261c85ac3da07ef35a276ee41",
+    "requests": 30141,
+    "sessions": 393,
+    "total_input_tokens": 3903400000,
+    "total_output_tokens": 32200000
+  },
+  "engine_overrides_vs_recipe": {
+    "max_seq_len": "262144 (recipe ships 200000; trace p99 input is 252k)",
+    "kv_block_size": 32,
+    "speculative_decoding": "disabled (recipe ships Eagle3 in kv-router variants; stripped everywhere)",
+    "kv_offload": "disabled (recipe ships 100 GiB host_cache_size + secondary_offload_min_priority on disagg prefill; stripped 2026-08-08 — GPU-only KV, enable_block_reuse retained)",
+    "note": "all other engine flags per recipes/kimi-k2.5 trtllm configs"
+  },
+  "deployment_mode": {
+    "phase2_disagg": "operator-less plain Deployments (manifests/operatorless/), DYN_NAMESPACE-scoped per arm, reusing dynamo-cloud etcd/NATS — no RBAC needed",
+    "phase1_agg": "requires operator (2-node multinode workers via Grove) — blocked on RBAC, manifest at recipes/dynamo-operator-rbac-ADMIN-APPLY.yaml"
+  },
+  "pending_blockers": [
+    "ADC credential expired (~daily corp reauth) — blocks all kubectl/cluster ops until refreshed",
+    "empty hf-token-secret must be created in dynamo-cloud once ADC is back (workers reference it via envFrom; weights themselves need no token)",
+    "OPTIONAL (Phase 1 agg only): operator RBAC needs container.admin"
+  ]
+}

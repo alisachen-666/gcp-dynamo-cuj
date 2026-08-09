@@ -1,0 +1,1716 @@
+# Source: dynamo-platform/charts/dynamo-operator/templates/epp.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-epp
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+# Gateway API inference resources
+- apiGroups: ["inference.networking.x-k8s.io"]
+  resources: ["inferencepools", "inferenceobjectives", "inferencemodelrewrites"]
+  verbs: ["get", "watch", "list"]
+- apiGroups: ["inference.networking.k8s.io"]
+  resources: ["inferencepools"]
+  verbs: ["get", "watch", "list"]
+# Core resources for pod discovery
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+# Dynamo k8s service discovery - endpointslices
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  verbs: ["get", "list", "watch"]
+# Dynamo k8s service discovery - worker metadata CRs
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamoworkermetadatas"]
+  verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+# Authentication/authorization
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create---
+# Source: dynamo-platform/charts/dynamo-operator/templates/gpu-discovery-rbac.yaml
+# Grants the operator read-only node access for GPU hardware discovery.
+# Nodes are cluster-scoped resources that cannot be granted via a namespace-scoped Role,
+# so they are always provided as a dedicated ClusterRole when GPU discovery is enabled.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-gpu-discovery
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]---
+# Source: dynamo-platform/charts/dynamo-operator/templates/leader-election-rbac.yaml
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-leader-election-role
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-manager-role
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - grove.io
+  resources:
+  - podcliquesets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - grove.io
+  resources:
+  - podcliques
+  - podcliquescalinggroups
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - grove.io
+  resources:
+  - podcliques/scale
+  - podcliquescalinggroups/scale
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - virtualservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingressclasses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - resource.k8s.io
+  resources:
+  - resourceclaimtemplates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - inference.networking.k8s.io
+  resources:
+  - inferencepools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - inference.networking.x-k8s.io
+  resources:
+  - inferencepools
+  - inferenceobjectives
+  - inferencemodelrewrites
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - nvidia.com
+  resources:
+  - dynamocheckpoints
+  - dynamocomponentdeployments
+  - dynamographdeploymentrequests
+  - dynamographdeployments
+  - dynamographdeploymentscalingadapters
+  - dynamomodels
+  - dynamoworkermetadatas
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nvidia.com
+  resources:
+  - dynamocheckpoints/finalizers
+  - dynamocomponentdeployments/finalizers
+  - dynamographdeploymentrequests/finalizers
+  - dynamographdeployments/finalizers
+  - dynamomodels/finalizers
+  - podsnapshots/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nvidia.com
+  resources:
+  - podsnapshots
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nvidia.com
+  resources:
+  - dynamocheckpoints/status
+  - dynamocomponentdeployments/status
+  - dynamographdeploymentrequests/status
+  - dynamographdeployments/status
+  - dynamographdeploymentscalingadapters/status
+  - dynamomodels/status
+  - podsnapshots/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - nvidia.com
+  resources:
+  - dynamographdeploymentscalingadapters/scale
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - leaderworkerset.x-k8s.io
+  resources:
+  - leaderworkersets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - scheduling.volcano.sh
+  resources:
+  - podgroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRole for Grove ClusterTopologyBinding access
+# This is always a ClusterRole since ClusterTopologyBinding resources are cluster-scoped
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-clustertopologybinding-reader
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - grove.io
+  resources:
+  - clustertopologybindings
+  verbs:
+  - get
+  - list
+  - watch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRole for kai-scheduler queue access
+# This is always a ClusterRole since Queue resources are cluster-scoped
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-queue-reader
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - scheduling.run.ai
+  resources:
+  - queues
+  verbs:
+  - get
+  - list---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRole for DRA DeviceClass access
+# This is always a ClusterRole since DeviceClass resources are cluster-scoped
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-deviceclass-reader
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - resource.k8s.io
+  resources:
+  - deviceclasses
+  verbs:
+  - get
+  - list
+  - watch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRole for PodSnapshotContent access
+# This is always a ClusterRole since PodSnapshotContent resources are cluster-scoped,
+# so it must not be folded into the namespace-restricted Role above.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-podsnapshotcontents
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - nvidia.com
+  resources:
+  - podsnapshotcontents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nvidia.com
+  resources:
+  - podsnapshotcontents/status
+  verbs:
+  - get
+  - patch
+  - update---
+# Source: dynamo-platform/charts/dynamo-operator/templates/metrics-auth-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-metrics-auth
+  labels:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create---
+# Source: dynamo-platform/charts/dynamo-operator/templates/planner.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-planner
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamocomponentdeployments", "dynamographdeployments"]
+  verbs: ["get", "list", "create", "update", "patch"]
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamographdeploymentscalingadapters/scale"]
+  verbs: ["patch"]
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamoworkermetadatas"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]---
+# Source: dynamo-platform/charts/dynamo-operator/templates/profiling-job-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dgdr-profiling
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: dgdr-profiling
+rules:
+# ConfigMaps - needed for saving profiling results
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create", "get", "update", "patch", "delete"]
+# DynamoGraphDeploymentRequests - needed to get DGDR info
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamographdeploymentrequests"]
+  verbs: ["get"]
+# DynamoGraphDeployments - needed for online profiling to create test deployments
+# The operator will handle creating the actual pods, services, and deployments
+- apiGroups: ["nvidia.com"]
+  resources: ["dynamographdeployments"]
+  verbs: ["get", "create", "delete", "list", "watch"]
+# Pods - needed for listing pods by label selector and getting logs from test deployments
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list", "get", "create", "delete"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]---
+# Source: dynamo-platform/charts/dynamo-operator/templates/topology-label-rbac.yaml
+# Grants the operator read-only node access for topology label copy.
+# Nodes are cluster-scoped resources that cannot be granted via a namespace-scoped Role,
+# so this is always provided as a dedicated ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-topology-label
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-rbac.yaml
+# ClusterRole for patching cluster-scoped webhook configurations.
+# Only the cluster-wide operator may also patch CRD conversion CA bundles.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-webhook-injector
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch---
+# Source: dynamo-platform/charts/grove/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: grove:system:grove-operator
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-clusterrole
+    app.kubernetes.io/name: grove-operator
+    app.kubernetes.io/part-of: grove
+rules:
+- apiGroups:
+  - scheduler.grove.io
+  resources:
+  - podgangs
+  - podgangs/status
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - grove.io
+  resources:
+  - podcliquesets
+  - podcliquesets/status
+  - podcliques
+  - podcliques/status
+  - podcliquescalinggroups
+  - clustertopologybindings
+  - clustertopologybindings/status
+  - podcliquescalinggroups/status
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/status
+  - serviceaccounts
+  - services
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - create
+    - get
+    - list
+    - patch
+    - delete
+    - watch
+    - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+    - ""
+  resources:
+    - secrets
+  verbs:
+    - create
+    - get
+    - list
+    - patch
+    - delete
+    - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - get
+  - list
+  - delete
+  - deletecollection
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - kai.scheduler
+  resources:
+  - topologies
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+  - delete
+# DRA (Dynamic Resource Allocation) integration for resource sharing
+- apiGroups:
+  - resource.k8s.io
+  resources:
+  - resourceclaims
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - resource.k8s.io
+  resources:
+  - resourceclaimtemplates
+  verbs:
+  - get
+  - list
+  - watch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/gpu-discovery-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-gpu-discovery
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-gpu-discovery
+subjects:
+  - kind: ServiceAccount
+    name: dynamo-platform-dynamo-operator-controller-manager
+    namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/dynamo-operator/templates/leader-election-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-leader-election-rolebinding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'dynamo-platform-dynamo-operator-leader-election-role'
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-manager-rolebinding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'dynamo-platform-dynamo-operator-manager-role'
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRoleBinding for Grove ClusterTopologyBinding access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-clustertopologybinding-reader-binding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-clustertopologybinding-reader
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRoleBinding for kai-scheduler queue access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-queue-reader-binding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-queue-reader
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRoleBinding for DRA DeviceClass access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-deviceclass-reader-binding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-deviceclass-reader
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/manager-rbac.yaml
+# ClusterRoleBinding for PodSnapshotContent access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-podsnapshotcontents-binding
+  labels:
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-podsnapshotcontents
+subjects:
+- kind: ServiceAccount
+  name: 'dynamo-platform-dynamo-operator-controller-manager'
+  namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/metrics-auth-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-metrics-auth
+  labels:
+    app.kubernetes.io/component: metrics
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-metrics-auth
+subjects:
+- kind: ServiceAccount
+  name: dynamo-platform-dynamo-operator-controller-manager
+  namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/dynamo-operator/templates/profiling-job-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dgdr-profiling
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: dgdr-profiling
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dgdr-profiling
+subjects:
+- kind: ServiceAccount
+  name: dgdr-profiling-job
+  namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/dynamo-operator/templates/topology-label-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-topology-label
+  labels:
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-topology-label
+subjects:
+  - kind: ServiceAccount
+    name: dynamo-platform-dynamo-operator-controller-manager
+    namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-webhook-injector-binding
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dynamo-platform-dynamo-operator-dynamo-cloud-webhook-injector
+subjects:
+- kind: ServiceAccount
+  name: dynamo-platform-dynamo-operator-controller-manager
+  namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/grove/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grove:system:grove-operator
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-clusterrolebinding
+    app.kubernetes.io/name: grove-operator
+    app.kubernetes.io/part-of: grove
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: grove:system:grove-operator
+subjects:
+- kind: ServiceAccount
+  name: grove-operator
+  namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-rbac.yaml
+# Role to manage the webhook certificate secret (create placeholder, read, update)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dynamo-platform-dynamo-operator-webhook-cert-manager
+  namespace: dynamo-cloud
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - webhook-server-cert
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create---
+# Source: dynamo-platform/charts/grove/templates/leaderelection-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-lease-role
+    app.kubernetes.io/name: grove-operator
+    app.kubernetes.io/part-of: grove
+  name: grove:system:grove-operator-lease
+  namespace: 'dynamo-cloud'
+rules:
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dynamo-platform-dynamo-operator-webhook-cert-manager
+  namespace: dynamo-cloud
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dynamo-platform-dynamo-operator-webhook-cert-manager
+subjects:
+- kind: ServiceAccount
+  name: dynamo-platform-dynamo-operator-controller-manager
+  namespace: dynamo-cloud---
+# Source: dynamo-platform/charts/grove/templates/leaderelection-rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grove:system:grove-operator-lease
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-lease-rolebinding
+    app.kubernetes.io/name: grove-operator
+    app.kubernetes.io/part-of: grove
+  namespace: 'dynamo-cloud'
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grove:system:grove-operator-lease
+subjects:
+  - kind: ServiceAccount
+    name: grove-operator
+    namespace: 'dynamo-cloud'---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-configuration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: dynamo-platform-dynamo-operator-mutating
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    nvidia.com/dynamo-operator-namespace: dynamo-cloud
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      # TODO(1.4): Switch this path to /mutate/nvidia.com/v1beta1/dynamographdeployments
+      # and apiVersions below to v1beta1. The 1.3 operator serves both endpoints.
+      path: /mutate-nvidia-com-v1alpha1-dynamographdeployment
+  failurePolicy: Fail
+  name: mdynamographdeployment.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamographdeployments
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /mutate-nvidia-com-v1beta1-dynamocomponentdeployment
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: mdynamocomponentdeploymentv1beta1.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamocomponentdeployments
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /mutate-nvidia-com-v1beta1-dynamographdeploymentrequest
+  failurePolicy: Fail
+  name: mdynamographdeploymentrequestv1beta1.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamographdeploymentrequests
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /mutate-core-v1-pod-checkpoint-restore
+  failurePolicy: Ignore
+  name: mpodcheckpointrestore.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    # Pod checkpoint restore injects pod spec fields before creation. It is
+    # intentionally CREATE-only because pod UPDATE cannot apply that mutation.
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  timeoutSeconds: 10---
+# Source: dynamo-platform/charts/grove/templates/pcs-defaulting-webhook-config.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: podcliqueset-defaulting-webhook
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-pcs-defaulting-webhook
+    app.kubernetes.io/name: pcs-defaulting-webhook
+    app.kubernetes.io/part-of: grove
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: grove-operator
+        namespace: dynamo-cloud
+        path: /webhooks/default-podcliqueset
+        port: 9443
+    failurePolicy: Fail
+    matchPolicy: Exact
+    name: pcs.defaulting.webhooks.grove.io
+    namespaceSelector: { }
+    rules:
+      - apiGroups:
+          - "grove.io"
+        apiVersions:
+          - "v1alpha1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - podcliquesets
+        scope: "Namespaced"
+    sideEffects: None
+    timeoutSeconds: 10---
+# Source: dynamo-platform/charts/dynamo-operator/templates/webhook-configuration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: dynamo-platform-dynamo-operator-validating
+  labels:
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: dynamo-operator
+    app.kubernetes.io/part-of: dynamo-operator
+    nvidia.com/dynamo-operator-namespace: dynamo-cloud
+    helm.sh/chart: dynamo-operator-1.3.1
+    app.kubernetes.io/name: dynamo-operator
+    app.kubernetes.io/instance: dynamo-platform
+    app.kubernetes.io/version: "1.3.1"
+    app.kubernetes.io/managed-by: Helm
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /validate-nvidia-com-v1alpha1-dynamocomponentdeployment
+  failurePolicy: Fail
+  name: vdynamocomponentdeployment.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamocomponentdeployments
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      # TODO(1.4): Switch this path to /validate/nvidia.com/v1beta1/dynamographdeployments
+      # and apiVersions below to v1beta1. The 1.3 operator serves both endpoints.
+      path: /validate-nvidia-com-v1alpha1-dynamographdeployment
+  failurePolicy: Fail
+  name: vdynamographdeployment.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamographdeployments
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /validate-nvidia-com-v1alpha1-dynamocheckpoint
+  failurePolicy: Fail
+  name: vdynamocheckpoint.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamocheckpoints
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /validate-nvidia-com-v1alpha1-dynamomodel
+  failurePolicy: Fail
+  name: vdynamomodel.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamomodels
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: dynamo-platform-dynamo-operator-webhook-service
+      namespace: dynamo-cloud
+      path: /validate-nvidia-com-v1beta1-dynamographdeploymentrequest
+  failurePolicy: Fail
+  name: vdynamographdeploymentrequest.kb.io
+  rules:
+  - apiGroups:
+    - nvidia.com
+    apiVersions:
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dynamographdeploymentrequests
+  sideEffects: None
+  timeoutSeconds: 10---
+# Source: dynamo-platform/charts/grove/templates/clustertopology-validating-webhook-config.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: clustertopology-validating-webhook
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-clustertopology-validating-webhook
+    app.kubernetes.io/name: clustertopology-validating-webhook
+    app.kubernetes.io/part-of: grove
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: grove-operator
+        namespace: dynamo-cloud
+        path: /webhooks/validate-clustertopology
+        port: 9443
+    failurePolicy: Fail
+    matchPolicy: Exact
+    name: clustertopology.validating.webhooks.grove.io
+    namespaceSelector: { }
+    rules:
+      - apiGroups:
+          - "grove.io"
+        apiVersions:
+          - "v1alpha1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - clustertopologybindings
+        scope: "Cluster"
+    sideEffects: None
+    timeoutSeconds: 10---
+# Source: dynamo-platform/charts/grove/templates/pcs-validating-webhook-config.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: podcliqueset-validating-webhook
+  labels:
+    chart: "grove-v0.1.0-alpha.11"
+    release: "dynamo-platform"
+    app.kubernetes.io/component: operator-pcs-validating-webhook
+    app.kubernetes.io/name: pcs-validating-webhook
+    app.kubernetes.io/part-of: grove
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: grove-operator
+        namespace: dynamo-cloud
+        path: /webhooks/validate-podcliqueset
+        port: 9443
+    failurePolicy: Fail
+    matchPolicy: Exact
+    name: pcs.validating.webhooks.grove.io
+    namespaceSelector: { }
+    rules:
+      - apiGroups:
+          - "grove.io"
+        apiVersions:
+          - "v1alpha1"
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - podcliquesets
+        scope: "Namespaced"
+    sideEffects: None
+    timeoutSeconds: 10
