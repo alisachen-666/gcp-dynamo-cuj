@@ -16,6 +16,8 @@ FULL_TRACE = "/model-cache/traces/weka_256k_aiperf.jsonl"
 
 # arm -> (dgd name, concurrencies)
 ARMS = {
+    "arm1a-agg-eagle-rr": ("kimi-k25-agg-rr-eagle", "24"),
+    "arm1a-agg-eagle-kv": ("kimi-k25-agg-kv-eagle", "24"),
     "arm1b-agg-rr": ("kimi-k25-agg-rr", "8"),
     "arm1c-agg-kv-nvda": ("kimi-k25-agg-kv-nvda", "8"),
     "arm1d-agg-kv-tuned": ("kimi-k25-agg-kv-tuned", "8"),
@@ -35,14 +37,41 @@ base = RECIPE_PERF.read_text()
 
 def make_job(job_name, dgd, trace, conc, duration):
     t = base
-    # tokenizer from the PVC-staged checkpoint (gated repo would 401 without a token)
-    t = t.replace('--tokenizer "${TARGET_MODEL}"',
-                  '--tokenizer /model-cache/alisachen/Kimi-K2.5-NVFP4')
+    # tokenizer handling (aiperf 0.12.0): its dataset-decode workers force
+    # HF_HUB_OFFLINE, and the offline branch (_resolve_local_snapshot) only
+    # accepts HF-cache repo ids — a filesystem --tokenizer path crashes with
+    # HFValidationError. Workaround: stage the tokenizer files from the PVC
+    # into a local HF cache under the served-model id and run fully offline.
+    t = t.replace('--tokenizer "${TARGET_MODEL}"', '--tokenizer "${TARGET_MODEL}"'
+                  )  # keep repo-id form; resolution comes from the offline cache
+    t = t.replace(
+        "wait_for_model_ready\n",
+        "wait_for_model_ready\n\n"
+        "          export HF_HOME=/tmp/hf\n"
+        "          CACHE=/tmp/hf/hub/models--alisachen--Kimi-K2.5-NVFP4\n"
+        "          mkdir -p $CACHE/snapshots/local $CACHE/refs\n"
+        "          cp /model-cache/alisachen/Kimi-K2.5-NVFP4/*.json "
+        "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.py "
+        "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.jinja "
+        "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true\n"
+        "          printf local > $CACHE/refs/main\n"
+        "          export HF_HUB_OFFLINE=1\n"
+        "          ls $CACHE/snapshots/local/ | head -20\n",
+        1)
     t = t.replace("value: nvidia/Kimi-K2.5-NVFP4", "value: alisachen/Kimi-K2.5-NVFP4")
+    # our trace uses the dataset's native 64-token hash blocks; aiperf's
+    # mooncake loader defaults to 512 and rejects the trace without this.
+    # needs aiperf >= 0.12.0 — in 0.10.0 (recipe pin) --isl-block-size is
+    # synthetic-only and aborts when combined with --input-file
+    t = t.replace('pip install "aiperf==0.10.0"', 'pip install "aiperf==0.12.0" tiktoken blobfile')
+    t = t.replace("--custom-dataset-type mooncake_trace \\",
+                  "--custom-dataset-type mooncake_trace \\\n              --isl-block-size 64 \\\n              --no-fixed-schedule \\\n              --ignore-trace-delays \\")
     # model-cache is gcsfuse: sidecar injection annotation required
     t = t.replace("      labels:\n        app: kimi-k25-agg-rr-bench",
                   "      labels:\n        app: kimi-k25-agg-rr-bench\n"
-                  "      annotations:\n        gke-gcsfuse/volumes: \"true\"")
+                  "      annotations:\n        gke-gcsfuse/volumes: \"true\"\n"
+                  "        gke-gcsfuse/memory-limit: 4Gi\n"
+                  "        gke-gcsfuse/cpu-limit: \"2\"")
     t = t.replace("name: kimi-k25-agg-rr-bench", f"name: {job_name}")
     t = t.replace("app: kimi-k25-agg-rr-bench", f"app: {job_name}")
     t = t.replace("- kimi-k25-agg-rr", f"- {dgd}")  # antiaffinity DGD label value

@@ -55,6 +55,10 @@
     "total_input_tokens": 3903400000,
     "total_output_tokens": 32200000
   },
+  "bench_client": {
+    "aiperf": "0.12.0 (recipe pins 0.10.0 — bumped because the trace's native 64-token hash blocks need --isl-block-size on the mooncake loader, trace-loader support added post-0.10)",
+    "isl_block_size": 64
+  },
   "engine_overrides_vs_recipe": {
     "max_seq_len": "262144 (recipe ships 200000; trace p99 input is 252k)",
     "kv_block_size": 32,

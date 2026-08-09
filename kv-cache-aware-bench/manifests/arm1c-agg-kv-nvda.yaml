@@ -110,7 +110,7 @@ spec:
           securityContext:
             runAsUser: 0
           startupProbe:
-            failureThreshold: 60
+            failureThreshold: 240
             httpGet:
               path: /live
               port: 9090

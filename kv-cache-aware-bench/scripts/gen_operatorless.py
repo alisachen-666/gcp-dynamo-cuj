@@ -54,6 +54,9 @@ def build_deployment(dgd_name, comp_name, svc, dyn_namespace, graph_envs):
         sc = c.setdefault("securityContext", {})
         sc.setdefault("capabilities", {}).setdefault("add", []).append("IPC_LOCK")
         c["env"] += [
+            # health server for the recipe's :9090 startup probe — the operator
+            # injects this in DGD mode; operator-less must set it explicitly
+            {"name": "DYN_SYSTEM_PORT", "value": "9090"},
             # "0"/"1" (not y/n) — bare y/n round-trip as YAML booleans and break EnvVar
             {"name": "UCX_MEMTYPE_CACHE", "value": "0"},
             {"name": "UCX_IB_GID_INDEX", "value": "5"},
@@ -69,6 +72,16 @@ def build_deployment(dgd_name, comp_name, svc, dyn_namespace, graph_envs):
         if not any(cl.get("name") == "rdma" for cl in claims):
             claims.append({"name": "rdma"})
         c["resources"]["claims"] = claims
+
+    if not gpu:
+        # frontend must read tokenizer/config from the same local model path the
+        # workers register (no HF fallback for local paths)
+        c.setdefault("volumeMounts", []).append(
+            {"name": "model-cache", "mountPath": "/model-cache", "readOnly": True})
+        pod = dict(pod)
+        pod["volumes"] = list(pod.get("volumes") or []) + [
+            {"name": "model-cache",
+             "persistentVolumeClaim": {"claimName": "model-cache"}}]
 
     node_selector = dict(pod.get("nodeSelector") or {})
     node_selector["cloud.google.com/gke-nodepool"] = BENCH_NODEPOOL

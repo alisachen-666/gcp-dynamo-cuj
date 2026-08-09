@@ -27,6 +27,8 @@ spec:
         app: kimi-k25-agg-rr-bench
       annotations:
         gke-gcsfuse/volumes: "true"
+        gke-gcsfuse/memory-limit: 4Gi
+        gke-gcsfuse/cpu-limit: "2"
     spec:
       # Requires an untainted CPU/spare node so the bench pod doesn't share a node with
       # GPU workers. If no spare node is available on your setup, remove the affinity block below.
@@ -55,7 +57,7 @@ spec:
           # aiperf>=0.8.0 depends on crick, which has no Linux aarch64 wheel.
           # GB200 benchmark pods need build tools to compile it from source.
           apt-get update && apt-get install -y curl jq procps git build-essential && apt-get clean
-          pip install "aiperf==0.10.0" protobuf "transformers==4.57.3"
+          pip install "aiperf==0.12.0" tiktoken blobfile protobuf "transformers==4.57.3"
           sysctl -w net.ipv4.ip_local_port_range="1024 65000" 2>/dev/null || true
           export COLUMNS=200
           EPOCH=$(date +%s)
@@ -85,6 +87,14 @@ spec:
 
           wait_for_model_ready
 
+          export HF_HOME=/tmp/hf
+          CACHE=/tmp/hf/hub/models--alisachen--Kimi-K2.5-NVFP4
+          mkdir -p $CACHE/snapshots/local $CACHE/refs
+          cp /model-cache/alisachen/Kimi-K2.5-NVFP4/*.json /model-cache/alisachen/Kimi-K2.5-NVFP4/*.py /model-cache/alisachen/Kimi-K2.5-NVFP4/*.jinja /model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true
+          printf local > $CACHE/refs/main
+          export HF_HUB_OFFLINE=1
+          ls $CACHE/snapshots/local/ | head -20
+
           ROOT_DIR="${ROOT_ARTIFACT_DIR}/${EPOCH}_${JOB_NAME}"
           mkdir -p "$ROOT_DIR"
 
@@ -105,7 +115,7 @@ spec:
           mkdir -p "$WARMUP_DIR"
           aiperf profile \
             -m "${TARGET_MODEL}" \
-            --tokenizer /model-cache/alisachen/Kimi-K2.5-NVFP4 \
+            --tokenizer "${TARGET_MODEL}" \
             --tokenizer-trust-remote-code \
             --url "http://${ENDPOINT}" \
             --streaming \
@@ -128,10 +138,13 @@ spec:
 
             aiperf profile \
               -m "${TARGET_MODEL}" \
-              --tokenizer /model-cache/alisachen/Kimi-K2.5-NVFP4 \
+              --tokenizer "${TARGET_MODEL}" \
               --tokenizer-trust-remote-code \
               --input-file "${TRACE_FILE}" \
               --custom-dataset-type mooncake_trace \
+              --isl-block-size 64 \
+              --no-fixed-schedule \
+              --ignore-trace-delays \
               --url "http://${ENDPOINT}" \
               --streaming \
               --extra-inputs ignore_eos:true \

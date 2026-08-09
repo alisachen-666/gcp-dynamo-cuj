@@ -32,8 +32,11 @@
   - **KV-Tuned:** `--router-mode kv` with our Strategy C self-tuned parameters (Steps 1–2 sweeps).
 - **Execution Hardware:** CMCS cluster, `a4x-max` machine type (GB300 NVL72). Live benchmarks and DynoSim simulation runs both execute on this cluster.
 - **No Speculative Decoding (2026-08-08):** Eagle3 is stripped from every arm — nvfp4 base model only. The NVDA-recipe arms use the recipe's engine configs minus `speculative_config`; this is a tracked deviation recorded in `environment_lock.json`.
+  - **Exception (2026-08-09): recipe-direct 1A arms.** Two aggregated arms run NVDA's config AS SHIPPED, Eagle3 included, to anchor the study against the recipe's own published comparison: **1A-rr** (`agg-eagle-round-robin`) and **1A-kv** (`agg-eagle-kv-router`), both at the recipe's concurrency 24. Only environment adaptations applied (image pin, local weight paths, tolerations, RDMA claims, `max_seq_len` 262144 for trace compatibility). Prerequisite: `nvidia/Kimi-K2.5-Thinking-Eagle3` draft weights staged at `/model-cache/alisachen/Kimi-K2.5-Thinking-Eagle3` (gated on HF — mirror to the bucket like the base model). Eagle-vs-no-Eagle (1A-rr vs 1B, 1A-kv vs 1C) also isolates the speculative-decoding contribution.
 - **No KV Offloading (2026-08-08):** host-memory KV offload (`host_cache_size`, `secondary_offload_min_priority` on disagg prefill) is stripped from every arm — KV lives in GPU memory only. `enable_block_reuse` (on-GPU prefix cache) is retained since KV-aware routing depends on it. Tracked deviation in `environment_lock.json`.
 - **Deployment Mode:** Phase 2 disagg arms run operator-less (plain Deployments in `manifests/operatorless/`, per-arm `DYN_NAMESPACE` isolation over shared etcd/NATS) since cluster RBAC blocks the Dynamo operator. Phase 1 agg arms (2-node TP8/EP8 workers) need the operator + Grove — pending admin RBAC.
+- **GB300-Native First Round (2026-08-09):** first-round bench arms use engine configs derived for GB300 by aiconfigurator (memory fractions, batch/token caps, CUDA-graph lists, MoE/GEMM backends) — NOT the recipe's GB200-tuned values, which remain only in the recipe-direct 1A reference arms. Two solve brackets per topology: warm (`--prefix 133000`, trace reuse level) and cold (relaxed TTFT — the cold solve proved 137k-token cold prefill cannot meet 5 s TTFT on 24 GPUs, i.e. this workload is servable only via prefix caching).
+- **Simulation Policy (2026-08-09):** ALL simulation tasks (aiconfigurator, DynoSim) run with `--database-mode SILICON` (measured rows only; coverage gaps are reported, never extrapolated over) and execute in parallel with live cluster work, never serialized behind it.
 
 ---
 
@@ -72,6 +75,38 @@ transfer observed off the NVLink/RDMA path stops the run immediately (standing p
 
 Rerun the ladder from S1 after any engine-config change; S0 only after infra/image changes.
 
+## Adopted Methodology from `pareto-benchmarking-partner.md` (2026-08-09)
+
+The disagg phases adopt the ctx/gen rate-match methodology with one KV-aware adaptation:
+
+1. **Phase 2.5 (new): isolated prefill/decode characterization + rate-match P:D split.**
+   Before the full Phase 2 arms, measure `R_prefill(N)` (one TP4 prefill server, decode sink
+   with `max_new_tokens: 1`-style negligible generation) and `R_decode(N)` (one TP4 decode
+   server, overprovisioned prefill feeders) on np-1, sweeping N geometrically. Retain rows
+   per the CTX-only / GEN-only table schemas. Run the Phase-3 rate-match pseudocode with
+   `TOTAL_GPUS = 24` (and later 72) to derive the P:D split; cross-check against
+   aiconfigurator's recommendation and the recipe's shipped 3P+3D. Validate the winner on
+   silicon (= the Phase 2 arms themselves).
+2. **KV-aware adaptation — R_prefill is routing-policy-dependent.** With ~97% of trace
+   prefill tokens being within-session prefix reuse, effective prefill work is
+   `ISL × (1 − hit_rate)`, and hit rate depends on routing and cache spread. Characterize
+   prefill BOTH cold (cache flushed each point — conservative bound) and warm (steady-state
+   trace replay, separately under RR and KV-aware routing). Rate-match with both bounds; the
+   shift in optimal P:D between cold- and warm-matched splits is a reported result.
+3. **TTFT certification at operating concurrency.** AIPerf fixed-concurrency replay is a
+   closed-loop driver: certify prefill TTFT at `N_op = ceil(N_sys / n_prefill)` per the
+   existence-before-gate rule (never substitute a lower-N point). Sweep prefill to just past
+   the largest target `N_op`. Expect prefill admission queueing to dominate TTFT at 135k-token
+   median inputs; the "high TTFT + stable TPOT" debug signal identifies it.
+4. **Acceptance criteria + artifacts.** Every retained bench run must pass the validity
+   checks (steady state, zero failed samples, sink/feeder non-backpressure, clean logs,
+   percentiles present) and satisfy the run-folder contract (configs, server/frontend/client
+   logs, reports, run-index row → GCS `perf/` artifacts).
+5. **Visualizer.** Pareto page on `tok/s/user × tps/GPU` with traces: rate-match theory
+   (cold + warm), DynoSim projection, and live silicon per routing arm (RR / KV-NVDA /
+   KV-tuned); hover metadata + artifact links per the guide; latency-failing points visually
+   distinct.
+
 ## Phase 1: 24-GPU Aggregated Benchmarks (NVDA Recipe + Trace Replay)
 
 ```text
@@ -82,8 +117,10 @@ Cluster Architecture:
 - Router Scoring Formula: `worker_score = prefill_load_scale × max(0, prefill_blocks − overlap_credit × overlap_blocks) + decode_blocks` (lower wins; see verified formula + flag table at top of this document).
 
 Instructions:
-1. Arm 1A (NVIDIA Official Recipe Direct Benchmark):
-   - Deploy using official `recipes/kimi-k2.5` configuration flags directly.
+1. Arm 1A (NVIDIA Official Recipe Direct Benchmark — two routing variants, Eagle3 ON):
+   - **1A-rr:** deploy `manifests/arm1a-agg-eagle-rr.yaml` (recipe `agg-eagle-round-robin` as shipped). Bench: `manifests/perf/arm1a-agg-eagle-rr-bench.yaml`, concurrency 24.
+   - **1A-kv:** deploy `manifests/arm1a-agg-eagle-kv.yaml` (recipe `agg-eagle-kv-router` as shipped). Bench: `manifests/perf/arm1a-agg-eagle-kv-bench.yaml`, concurrency 24.
+   - Both retain Eagle3 speculative decoding per the recipe; requires Eagle3 draft weights staged in the model cache. 1A-kv vs 1A-rr reproduces NVDA's own KV-routing comparison on our cluster/trace; 1A vs 1B/1C isolates the Eagle contribution.
    - Execute standard AIPerf workload specification as defined in `recipes/kimi-k2.5/README.md`.
    - Measure baseline TTFT, TPOT/ITL, Tokens/sec/GPU, and KV Cache Hit Rate.
 

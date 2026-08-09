@@ -56,6 +56,41 @@ values above 1.0 abort frontend startup with guidance to express prefill weighti
 instead. Strategy C already follows this pattern. Host/disk cache-hit weights (0.75/0.25 defaults) are
 inert here: KV offloading is disabled in all arms.
 
+## aiconfigurator GB300 Solves (SILICON mode, 2026-08-09)
+
+24 GPUs, trtllm backend, perf DB 1.3.0rc10, ISL 137k / OSL 1100 from trace. Artifacts:
+`aic-results/` (top-N CSVs + full tgz incl. generated per-candidate engine configs).
+
+| Bracket | Best disagg P:D (workers ×4 GPU) | Prefill parallel | Decode parallel | TTFT | TPOT | tok/s/GPU |
+|---|---|---|---|---|---|---|
+| **Warm** (`--prefix 133000`, ~trace reuse) | **1 : 5** (conc 10) | dp4/ep4 (attention-DP) | tp4/ep4 | 1.38 s | 15.9 ms | 24.0 |
+| **Cold** (no reuse, TTFT gate 30 s) | **2 : 4** (conc 8) | tp4/ep4 | tp4/ep4 | 8.4 s | 15.9 ms | 17.7 |
+| Recipe (GB200-tuned) reference | 3 : 3 | tp4/ep4 attn-DP | tp4/ep4 | — | — | — |
+
+**Findings:**
+1. **Cold 137k prefill cannot meet 5 s TTFT on 24 GPUs at any config** (the strict cold solve
+   returned infeasible) — this workload is servable only via prefix caching. Cold needs 8.4 s
+   TTFT even at conc 8.
+2. **Warm traffic wants far less prefill than the recipe ships**: P:D 1:5 vs the recipe's 3:3.
+   At ~97% reuse, prefill demand collapses; the recipe's GB200 split would idle ~8 GPUs of
+   prefill on warm traffic. This directly confirms the cold/warm rate-match adaptation in the
+   plan (routing policy shifts the optimal provisioning, not just throughput).
+3. **Worker shape is stable across brackets**: 4-GPU single-node workers (tp4 or dp4 attention
+   + ep4 MoE) in every top candidate — our operator-less single-node pattern holds; only the
+   replica ratio moves. Decode tp8 2-node shapes appear only at low-concurrency
+   high-interactivity points.
+4. **TPOT ≤ 10 ms is not achievable at useful throughput at this ISL** (all points ≥ 12.7 ms).
+   The bench SLA should use TPOT ≈ 15 ms (≈ 63 tok/s/user) as the interactivity gate.
+5. GB300-native engine params from generated configs (vs GB200 recipe): `free_gpu_memory_fraction`
+   0.8 both tiers (recipe: 0.6 prefill / 0.85 decode), prefill `max_num_tokens` 137504
+   (recipe: 8192 + chunked prefill), `moe_config.backend: WIDEEP` (recipe: TRTLLM/CUTLASS),
+   decode `max_num_tokens` 32. Note the generator targets trtllm 1.3.0rc14 config format —
+   validate against our 1.3.1 runtime at S2-scale before adopting wholesale.
+6. Coverage note (SILICON policy): perf DB rows are sparse above 64k sequence length —
+   interpolation skips logged at 65k/131k. Treat absolute predictions at 137k ISL as
+   approximate; the P:D-ratio and shape conclusions are robust, per-point numbers get
+   silicon validation anyway.
+
 ## Run Log
 
 | Date | Phase | Arm | Config | Status | Notes |
@@ -74,10 +109,13 @@ inert here: KV offloading is disabled in all arms.
 | 2026-08-08 | 0 | — | AIPerf trace + smoke slices (GKE bench jobs) | ✅ | 28,444 replayable reqs (1,697 null-length skipped); hash_ids globalized (session-local scope would fake cross-session KV hits) |
 | 2026-08-09 | 0 | — | A4X MAX cross-check vs `gpu-recipes@fef5ad27` (official GKE TRT-LLM recipe) | ✅ | adopted: 8× `mrdma.google.com` NIC claims per GPU pod (`mrdma-all`), IPC_LOCK cap, UCX rail-aware pins (GID 5, local-subnet /64 — from DynamoBench m2r rev3 debugging), shm 250Gi, `PYTORCH_CUDA_ALLOC_CONF=expandable_segments`, `TLLM_NUMA_AWARE_WORKER_AFFINITY`. Deliberately NOT adopted: mpirun/SSH multinode machinery (dynamo orchestrates workers), gib NCCL plugin (NCCL is intra-node in Phase 2 TP4 workers; revisit for Phase 1 agg), UCX_TLS=tcp pin (would forbid RDMA — their agg recipe uses UCX for control only; ours carries KV transfer). `UCX_TLS` left unpinned — S2's transport guard verifies the actual KV path and we pin further only if TCP is observed. |
 | 2026-08-09 | 0.5 | S0 | Infra smoke (image/etcd/NATS/PVC/traces) | ✅ | PASS; PVC-write caveat resolved same day (IAM propagation + gcsfuse mkdir semantics) |
-| | 0.5 | S1 | Weights + 1P1D engine up + manual curl | ⬜ | scale arm 2B to 1/1 |
-| | 0.5 | S2 | Mini e2e AIPerf (50 reqs, conc 2) + RDMA path check | ⬜ | `smoke2-mini-e2e.yaml` |
+| 2026-08-09 | 1 | 1A-rr/1A-kv | Recipe-direct agg arms added (Eagle3 ON, conc 24) | ⬜ | manifests + bench jobs generated; needs Eagle3 draft weights mirrored + operator RBAC (or LWS path) |
+| 2026-08-09 | 2.5 | — | aic GB300 solves: SILICON warm+cold (primary), HYBRID (suppl.) | ✅ | see "aiconfigurator GB300 Solves"; warm P:D=1:5, cold 2:4, recipe 3:3 |
+| 2026-08-09 | 0.5 | S1 | Weights + 1P1D engine up + manual curl | ✅ | **PASS** — model discovered, coherent completion (`finish_reason: stop`), prefix cache active (`cached_tokens` reported). 5 operator-less defects found+fixed en route: gcsfuse eviction @500Gi, probe budget, RollingUpdate strand, missing `DYN_SYSTEM_PORT`, frontend tokenizer mount. Warm-cache weight load ≈7 min (vs ~55 min cold via gcsfuse) |
+| 2026-08-09 | 0.5 | S2 | Mini e2e AIPerf (conc 2) + RDMA path check | ✅ | **PASS** (attempt 7): 273 reqs replayed, 0 failures, TTFT p50 340ms, ITL 8.2ms; transport clean (eth0 delta ≈0 across attempts). 4 bench-client defects found+fixed: mooncake 512-block default (need `--isl-block-size 64`), aiperf 0.10→0.12 (trace block-size support), missing tiktoken, aiperf-0.12 offline-worker bug (local tokenizer paths crash → staged local HF cache + `HF_HUB_OFFLINE=1`); plus replay-mode fix: session-relative timestamps ⇒ `--no-fixed-schedule --ignore-trace-delays` (closed-loop concurrency dispatch; think-time gaps dropped — uniform across arms, noted as limitation) |
+| 2026-08-09 | 0.5 | S3 | Short replay 3P+3D conc 32 + `UCX_PROTO_INFO` transport proof | ✅ | **PASS** (attempt 4): 370/372 ok (0.54% err — 2 benign empty-content on clamped-output rows); ITL p50 18ms, 808 tok/s out. **Transport proof: KV bulk on cuda_ipc (NVLink) + rc_mlx5 (RDMA) small msgs, zero TCP.** 3 defects found+fixed: aiperf multi-turn concatenation w/ cumulative-context rows (drop session_id — standalone rows, reuse via hash_ids), NATS 1MB max_payload (→16MB via nats.conf; 256k-token prompts ≈1.5MB), dynamo NATS clients cache max_payload at connect (restart stack after NATS config change) |
 | | 0.5 | S3 | Short replay, 3 real sessions @ conc 32, 3P+3D | ⬜ | `smoke3-short-replay.yaml` |
-| | 0.5 | S4 | 1h endurance canary (arm 2B trace) | ⬜ | gate for multi-hour sweeps |
+| 2026-08-09 | 0.5 | S4 | 1h endurance canary (arm 2B trace, conc 32) | ⚠️ | **Completed the hour with a real finding**: 2,069 reqs ok, 4.52% err (88 empty-content replay artifacts, 8 timeouts, 2×500), sustained 693 tok/s, ITL p50 15.4ms. **At min ~21, 2 of 3 decode workers crashed within 20s** ("Hang detected on rank 0 in PyExecutor" → MPI rank killed after a >300s executor stall; watchdog timeout is hard-coded in the 1.3.1 image) — load-correlated with the trace's giant-session wave; stack self-recovered and finished. Verdict: recipe's GB200-tuned decode config (bs 128 / mnt 640) is unstable under sustained GB300 conc-32 long-context load. Round-1 arms move to aic GB300-native configs (decode mnt 32, small batch) per 2026-08-09 decision; re-canary S3+S4 on those before official runs. |
 
 **2026-08-08 decision:** speculative decoding (Eagle3) disabled across ALL arms — nvfp4 base model only. Simplifies gated-model access (one model) and removes a confound from the routing comparison. Manifests generated via `scripts/gen_manifests.py` with Eagle stripped, image pinned to `1.3.1`, `max_seq_len` 262144, GPU-taint tolerations added.
 
