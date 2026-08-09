@@ -20,6 +20,42 @@
 - Model mix in trace: opus-4-8 59%, fable-5 21%, opus-4-6 12%, other/unlabeled 8% (all replayed against Kimi 2.5).
 - Durable copy: `data/weka_256k_trace.jsonl.gz` (8 MB); working copy in session scratchpad.
 
+## Router Scoring Formula (source-verified 2026-08-09)
+
+All KV-aware arms are governed by this scoring function, confirmed by reading
+`ai-dynamo/dynamo` **v1.3.1** (the runtime we pinned), `lib/kv-router/src/scheduling/selector.rs::worker_logit`
+— the runtime's debug log prints the same expression:
+
+```
+worker_score = prefill_load_scale × max(0, prefill_blocks − overlap_credit × decay × overlap_blocks)
+             + decode_blocks                     # per candidate worker; LOWER score wins
+decay = 1 / (1 + credit_decay × normalized_excess_prefill_load)   # = 1.0 at our credit_decay=0
+```
+
+- `overlap_blocks` comes from the router's radix-tree prefix indexer (`lib/kv-router/src/indexer/`) fed by worker KV events; `decode_blocks` is the worker's potential active decode blocks.
+- Selection: `--router-temperature 0` picks argmin deterministically; `>0` samples via softmax over negated scores (`selector.rs::softmax_sample`).
+- Queue ordering is separate from worker scoring: `--router-queue-policy` ∈ fcfs / lcfs / wspt (`scheduling/policy.rs`); wspt orders by `(1+priority)/new_tokens` with cache overlap subtracted from `new_tokens`.
+
+**Per-arm router settings:**
+
+| Arm | prefill_load_scale | overlap_credit | credit_decay | temperature | queue policy |
+|---|---|---|---|---|---|
+| B (round-robin) | — (no scoring; frontend `--router-mode round-robin`) | — | — | — | — |
+| C (KV-NVDA defaults) | 1.0 | 1.0 | 0.0 | 0.0 | fcfs |
+| D (KV-tuned, Step 1) | 2.0 | sweep 0.7–1.0 | 0.0 | 0.0 | fcfs |
+| D (KV-tuned, Step 2) | 2.0 | Step-1 winner | sweep 0.5–4.0 | 0.0 | fcfs (+wspt ablation) |
+
+Step 2 revised 2026-08-09: temperature stays pinned at 0.0 in every configuration — load spreading
+comes from `--router-kv-overlap-score-credit-decay` (deterministic: shrinks cache-affinity credit
+only on workers with excess active prefill backlog; decay=1 halves credit at one request-equivalent
+of excess load) rather than stochastic softmax sampling. Decay requires `--router-track-prefill-tokens`,
+which defaults to true at v1.3.1.
+
+Constraint found in source (`scheduling/config.rs`): `overlap_score_credit` is hard-validated to [0, 1] —
+values above 1.0 abort frontend startup with guidance to express prefill weighting via `prefill_load_scale`
+instead. Strategy C already follows this pattern. Host/disk cache-hit weights (0.75/0.25 defaults) are
+inert here: KV offloading is disabled in all arms.
+
 ## Run Log
 
 | Date | Phase | Arm | Config | Status | Notes |
@@ -36,7 +72,8 @@
 | 2026-08-09 | 0 | — | Weights source switched to public bucket mirror | ✅ | `Alisa233/Kimi-K2.5-NVFP4-bucket`, 590.9 GB, config verified vs locked spec — **HF-token blocker eliminated** |
 | | 0 | — | Model download (~590 GB → `/model-cache/Kimi-K2.5-NVFP4`) | ⬜ | bucket downloader in `00-support.yaml`; launch when ADC restored |
 | 2026-08-08 | 0 | — | AIPerf trace + smoke slices (GKE bench jobs) | ✅ | 28,444 replayable reqs (1,697 null-length skipped); hash_ids globalized (session-local scope would fake cross-session KV hits) |
-| | 0.5 | S0 | Infra smoke (image/etcd/NATS/PVC/traces) | ⬜ | `manifests/perf/smoke0-infra.yaml` |
+| 2026-08-09 | 0 | — | A4X MAX cross-check vs `gpu-recipes@fef5ad27` (official GKE TRT-LLM recipe) | ✅ | adopted: 8× `mrdma.google.com` NIC claims per GPU pod (`mrdma-all`), IPC_LOCK cap, UCX rail-aware pins (GID 5, local-subnet /64 — from DynamoBench m2r rev3 debugging), shm 250Gi, `PYTORCH_CUDA_ALLOC_CONF=expandable_segments`, `TLLM_NUMA_AWARE_WORKER_AFFINITY`. Deliberately NOT adopted: mpirun/SSH multinode machinery (dynamo orchestrates workers), gib NCCL plugin (NCCL is intra-node in Phase 2 TP4 workers; revisit for Phase 1 agg), UCX_TLS=tcp pin (would forbid RDMA — their agg recipe uses UCX for control only; ours carries KV transfer). `UCX_TLS` left unpinned — S2's transport guard verifies the actual KV path and we pin further only if TCP is observed. |
+| 2026-08-09 | 0.5 | S0 | Infra smoke (image/etcd/NATS/PVC/traces) | ✅ | PASS; PVC-write caveat resolved same day (IAM propagation + gcsfuse mkdir semantics) |
 | | 0.5 | S1 | Weights + 1P1D engine up + manual curl | ⬜ | scale arm 2B to 1/1 |
 | | 0.5 | S2 | Mini e2e AIPerf (50 reqs, conc 2) + RDMA path check | ⬜ | `smoke2-mini-e2e.yaml` |
 | | 0.5 | S3 | Short replay, 3 real sessions @ conc 32, 3P+3D | ⬜ | `smoke3-short-replay.yaml` |

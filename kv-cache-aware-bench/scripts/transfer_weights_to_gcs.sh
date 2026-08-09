@@ -15,7 +15,7 @@ import json,sys
 for e in json.load(sys.stdin):
     if e['type']=='file': print(e['size'], e['path'])" > "$LIST"
 
-total=$(awk '{s+=$1} END {print s}' "$LIST")
+total=$(awk "{s+=$1} END {printf \"%.0f\", s}" "$LIST")
 echo "$(wc -l < "$LIST") files, $((total/1000000000)) GB -> $DEST"
 
 transfer_one() {

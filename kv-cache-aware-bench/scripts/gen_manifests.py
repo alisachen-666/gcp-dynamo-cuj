@@ -77,6 +77,19 @@ def base_transforms(text):
         "resourceClaimTemplateName: your-compute-domain-channel",
         "resourceClaimTemplateName: kv-bench-compute-domain-channel",
     )
+    # A4X MAX: claim all 8 RDMA NICs per GPU pod (gpu-recipes@fef5ad27 pattern)
+    text = text.replace(
+        "resourceClaims:\n          - name: compute-domain-channel\n"
+        "            resourceClaimTemplateName: kv-bench-compute-domain-channel",
+        "resourceClaims:\n          - name: compute-domain-channel\n"
+        "            resourceClaimTemplateName: kv-bench-compute-domain-channel\n"
+        "          - name: rdma\n"
+        "            resourceClaimTemplateName: mrdma-all",
+    )
+    text = text.replace(
+        "claims:\n          - name: compute-domain-channel",
+        "claims:\n          - name: compute-domain-channel\n          - name: rdma",
+    )
     return text
 
 

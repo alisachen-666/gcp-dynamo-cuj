@@ -4,10 +4,28 @@
 - **Model:** Kimi 2.5 (1T MoE, 32B active, FP8 precision, ~35 KB/token MLA compressed KV cache, 256k max context length)
 - **Target Dataset:** `semianalysisai/cc-traces-weka-062126-256k`
 - **NVIDIA Reference Recipe:** `recipes/kimi-k2.5`
-- **Dynamo KV Router Formula:** `Worker Score = prefill_load_scale * (prefill_blocks - cache_overlap_credit) + decode_blocks`
+- **Dynamo KV Router Formula (verified against source, `ai-dynamo/dynamo` v1.3.1, `lib/kv-router/src/scheduling/selector.rs::worker_logit`):**
+
+  ```
+  worker_score = PREFILL_LOAD_SCALE × max(0, prefill_blocks − OVERLAP_CREDIT × decay × overlap_blocks)
+              + decode_blocks                                          # lower score wins
+  decay = 1 / (1 + CREDIT_DECAY × normalized_excess_prefill_load)      # 1.0 when CREDIT_DECAY=0
+  ```
+
+  where the CAPITALIZED terms are our to-be-tuned flags:
+
+  | Flag | Symbol | Default (= KV-NVDA arm) | Strategy C |
+  |---|---|---|---|
+  | `--router-prefill-load-scale` | `PREFILL_LOAD_SCALE` | 1.0 | 2.0 (weight prefill/TTFT cost 2×) |
+  | `--router-kv-overlap-score-credit` | `OVERLAP_CREDIT` | 1.0 | sweep 0.7–1.0 (Step 1), 0.5–0.85 (Step 2); **hard-validated ≤ 1.0** — frontend refuses to start above it |
+  | `--router-kv-overlap-score-credit-decay` | `CREDIT_DECAY` | 0.0 (off) | **primary Step 2 lever (2026-08-09):** sweep {0.5, 1, 2, 4} — deterministic hot-worker cache-vs-load tradeoff; needs `--router-track-prefill-tokens` (default true) |
+  | `--router-temperature` | — | 0.0 | **pinned 0.0 in all steps** (2026-08-09: deterministic argmin; stochastic spreading dropped in favor of credit decay) |
+  | `--router-queue-policy` | — | fcfs | fcfs (Steps 1–2); wspt as optional ablation on the Step-2 winner (orders queue by `(1+priority)/new_tokens` after overlap subtraction) |
+
+  Notes: `prefill_blocks`/`overlap_blocks` are in KV block units (block size 32 for us); `decode_blocks` is the worker's potential active decode blocks; host/disk cache-hit weights (defaults 0.75/0.25) are inert in our runs — KV offloading is disabled. Semantics: a worker holding more of the request's prefix gets a lower score and wins; `PREFILL_LOAD_SCALE > 1` makes un-cached prefill work costlier, pushing the router harder toward cache hits and lighter-loaded workers.
 - **Strategy C Tuning Logic:**
   - **Step 1 (TTFT SLA Lock):** Set `--router-prefill-load-scale 2.0`, `--router-queue-policy fcfs`, `--router-temperature 0.0`, and sweep `--router-kv-overlap-score-credit` (0.7 to 1.0).
-  - **Step 2 (Throughput Maximization):** Set `--router-queue-policy wspt`, `--router-temperature 0.3`, and sweep credit down through 0.5–0.85.
+  - **Step 2 (Throughput Maximization, revised 2026-08-09):** Keep `--router-temperature 0.0` (deterministic selection throughout — no stochastic spreading) and instead use `--router-kv-overlap-score-credit-decay` as the load-balance lever: sweep {0.5, 1.0, 2.0, 4.0} at the Step-1-winning credit. Decay shrinks the cache-affinity credit only on workers whose active prefill backlog exceeds the least-loaded worker (decay=1 halves the credit at one request-equivalent of excess load), so cache locality yields to balance exactly when a worker is hot — a deterministic alternative to temperature sampling. Requires `--router-track-prefill-tokens` (default true — no extra flag). Optionally ablate `--router-queue-policy wspt` vs fcfs on the decay winner.
 - **Routing Comparison Requirement:** Every topology (24-GPU Aggregated, 24-GPU Disaggregated, 72-GPU Disaggregated) runs BOTH `--router-mode round-robin` (baseline) and `--router-mode kv` on the same Weka trace, so KV-aware perf gain is directly measurable per topology.
 - **KV-Aware Config Variants (Phases 1 & 2):** KV-aware routing runs in TWO variants so recipe-default vs. self-tuned gain is separable:
   - **KV-NVDA:** `--router-mode kv` with router parameters exactly as shipped in `recipes/kimi-k2.5` (no tuning).
@@ -61,7 +79,7 @@ Act as an Inference Systems Engineer. Execute live benchmarking on a 24-GPU Aggr
 
 Cluster Architecture:
 - Hardware: 24 GPUs in unified Aggregated topology (all 24 GPUs process both Prefill and Decode).
-- Router Scoring Formula: Worker Score = prefill_load_scale * (prefill_blocks - cache_overlap_credit) + decode_blocks.
+- Router Scoring Formula: `worker_score = prefill_load_scale × max(0, prefill_blocks − overlap_credit × overlap_blocks) + decode_blocks` (lower wins; see verified formula + flag table at top of this document).
 
 Instructions:
 1. Arm 1A (NVIDIA Official Recipe Direct Benchmark):
@@ -81,7 +99,7 @@ Instructions:
 4. Arm 1D (Weka Trace Replay — KV-Aware, Self-Tuned Strategy C):
    - Deploy with `--router-mode kv` using `weka_256k_trace.jsonl`.
    - Execute Strategy C Step 1: Set `--router-prefill-load-scale 2.0`, `--router-queue-policy fcfs`, `--router-temperature 0.0`, and sweep `--router-kv-overlap-score-credit` (0.7 to 1.0) to lock p99 TTFT SLA.
-   - Execute Strategy C Step 2: Set `--router-queue-policy wspt`, `--router-temperature 0.3`, and sweep credit (0.5 to 0.85) to maximize throughput.
+   - Execute Strategy C Step 2 (revised 2026-08-09): Keep `--router-temperature 0.0`; at the Step-1-winning credit, sweep `--router-kv-overlap-score-credit-decay` {0.5, 1.0, 2.0, 4.0} to maximize throughput; optionally ablate `--router-queue-policy wspt` on the winner.
    - Flush host/GPU KV cache between runs.
    - Report perf gain vs. Arm 1B (round-robin) AND vs. Arm 1C (KV recipe defaults) on identical hardware and trace.
 
@@ -113,7 +131,7 @@ Instructions:
 5. Arm 2C (Weka Trace Disaggregated — KV-Aware, NVDA Recipe Router Defaults):
    - Run AIPerf using `weka_256k_trace.jsonl` with `--router-mode kv` and router parameters exactly as shipped in `recipes/kimi-k2.5` (no tuning). Flush KV cache prior to run.
 6. Arm 2D (Weka Trace Disaggregated — KV-Aware, Self-Tuned Strategy C):
-   - Run AIPerf using `weka_256k_trace.jsonl` with Strategy C tuned KV routing (`--router-mode kv`, `--router-prefill-load-scale 2.0`, `--router-queue-policy fcfs`, then wspt/temperature 0.3 sweep). Flush KV cache prior to run.
+   - Run AIPerf using `weka_256k_trace.jsonl` with Strategy C tuned KV routing (`--router-mode kv`, `--router-prefill-load-scale 2.0`, `--router-queue-policy fcfs`, `--router-temperature 0.0`, Step-1 credit winner, then Step-2 credit-decay sweep {0.5, 1, 2, 4}). Flush KV cache prior to run.
    - Report perf gain vs. Arm 2B (round-robin) AND vs. Arm 2C (KV recipe defaults) on identical hardware and trace.
 7. Arm 2E (Dynamo Profiler Calibration):
    - Attach Dynamo Profiler during live Arm 2D execution to capture:

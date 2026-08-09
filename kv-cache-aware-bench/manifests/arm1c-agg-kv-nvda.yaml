@@ -136,6 +136,8 @@ spec:
         resourceClaims:
           - name: compute-domain-channel
             resourceClaimTemplateName: kv-bench-compute-domain-channel
+          - name: rdma
+            resourceClaimTemplateName: mrdma-all
         volumes:
           - name: model-cache
             persistentVolumeClaim:
@@ -151,6 +153,7 @@ spec:
           gpu: "4"
         claims:
           - name: compute-domain-channel
+          - name: rdma
 ---
 apiVersion: v1
 kind: ConfigMap

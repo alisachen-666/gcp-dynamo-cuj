@@ -31,6 +31,8 @@ metadata:
     app: kimi-k25-disagg-kv-nvda-frontend
     nvidia.com/dynamo-graph-deployment-name: kimi-k25-disagg-kv-nvda
 spec:
+  strategy:
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -74,6 +76,7 @@ spec:
         resources: {}
       nodeSelector:
         kubernetes.io/arch: arm64
+        cloud.google.com/gke-nodepool: np-1
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists
@@ -106,6 +109,8 @@ metadata:
     app: kimi-k25-disagg-kv-nvda-prefill
     nvidia.com/dynamo-graph-deployment-name: kimi-k25-disagg-kv-nvda
 spec:
+  strategy:
+    type: Recreate
   replicas: 3
   selector:
     matchLabels:
@@ -116,7 +121,7 @@ spec:
       annotations:
         gke-gcsfuse/volumes: 'true'
         gke-gcsfuse/memory-limit: 8Gi
-        gke-gcsfuse/ephemeral-storage-limit: 500Gi
+        gke-gcsfuse/ephemeral-storage-limit: 1200Gi
     spec:
       containers:
       - args:
@@ -172,6 +177,18 @@ spec:
           value: nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222
         - name: DYN_NAMESPACE
           value: kvbench-disagg-kv-nvda
+        - name: UCX_MEMTYPE_CACHE
+          value: '0'
+        - name: UCX_IB_GID_INDEX
+          value: '5'
+        - name: UCX_IB_ROCE_LOCAL_SUBNET
+          value: '1'
+        - name: UCX_IB_ROCE_SUBNET_PREFIX_LEN
+          value: '64'
+        - name: PYTORCH_CUDA_ALLOC_CONF
+          value: expandable_segments:True
+        - name: TLLM_NUMA_AWARE_WORKER_AFFINITY
+          value: '1'
         image: nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:1.3.1
         name: prefill
         resources:
@@ -179,8 +196,12 @@ spec:
             nvidia.com/gpu: '4'
           claims:
           - name: compute-domain-channel
+          - name: rdma
         securityContext:
           runAsUser: 0
+          capabilities:
+            add:
+            - IPC_LOCK
         startupProbe:
           failureThreshold: 60
           httpGet:
@@ -202,6 +223,7 @@ spec:
             name: hf-token-secret
       nodeSelector:
         kubernetes.io/arch: arm64
+        cloud.google.com/gke-nodepool: np-1
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists
@@ -220,10 +242,12 @@ spec:
       - name: shm
         emptyDir:
           medium: Memory
-          sizeLimit: 64Gi
+          sizeLimit: 250Gi
       resourceClaims:
       - name: compute-domain-channel
         resourceClaimTemplateName: kv-bench-compute-domain-channel
+      - name: rdma
+        resourceClaimTemplateName: mrdma-all
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -234,6 +258,8 @@ metadata:
     app: kimi-k25-disagg-kv-nvda-decode
     nvidia.com/dynamo-graph-deployment-name: kimi-k25-disagg-kv-nvda
 spec:
+  strategy:
+    type: Recreate
   replicas: 3
   selector:
     matchLabels:
@@ -244,7 +270,7 @@ spec:
       annotations:
         gke-gcsfuse/volumes: 'true'
         gke-gcsfuse/memory-limit: 8Gi
-        gke-gcsfuse/ephemeral-storage-limit: 500Gi
+        gke-gcsfuse/ephemeral-storage-limit: 1200Gi
     spec:
       containers:
       - args:
@@ -312,6 +338,18 @@ spec:
           value: nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222
         - name: DYN_NAMESPACE
           value: kvbench-disagg-kv-nvda
+        - name: UCX_MEMTYPE_CACHE
+          value: '0'
+        - name: UCX_IB_GID_INDEX
+          value: '5'
+        - name: UCX_IB_ROCE_LOCAL_SUBNET
+          value: '1'
+        - name: UCX_IB_ROCE_SUBNET_PREFIX_LEN
+          value: '64'
+        - name: PYTORCH_CUDA_ALLOC_CONF
+          value: expandable_segments:True
+        - name: TLLM_NUMA_AWARE_WORKER_AFFINITY
+          value: '1'
         image: nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:1.3.1
         name: decode
         resources:
@@ -319,8 +357,12 @@ spec:
             nvidia.com/gpu: '4'
           claims:
           - name: compute-domain-channel
+          - name: rdma
         securityContext:
           runAsUser: 0
+          capabilities:
+            add:
+            - IPC_LOCK
         startupProbe:
           failureThreshold: 60
           httpGet:
@@ -342,6 +384,7 @@ spec:
             name: hf-token-secret
       nodeSelector:
         kubernetes.io/arch: arm64
+        cloud.google.com/gke-nodepool: np-1
       tolerations:
       - key: nvidia.com/gpu
         operator: Exists
@@ -360,7 +403,9 @@ spec:
       - name: shm
         emptyDir:
           medium: Memory
-          sizeLimit: 64Gi
+          sizeLimit: 250Gi
       resourceClaims:
       - name: compute-domain-channel
         resourceClaimTemplateName: kv-bench-compute-domain-channel
+      - name: rdma
+        resourceClaimTemplateName: mrdma-all
