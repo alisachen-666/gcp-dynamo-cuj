@@ -136,9 +136,18 @@ and hunt max throughput; latency (TTFT p95, TPOT) is always REPORTED next to eve
 throughput number but never filters the sweep or the selection. The earlier
 TTFT ≤ 5 s / TPOT ≤ 20 ms pair survives only as an informational annotation
 (`sla_pass` column, hollow marks on the Pareto page) so readers can see where each
-point sits relative to the recipe's goodput thresholds. Selection rule: max KV-aware
-throughput; RR reported at the same cell for the impact ratio. Concurrency axis
-extended (sim: to 384; live: 32–256 at 1800 s per point) to find the rollover.
+point sits relative to the recipe's goodput thresholds. Concurrency axis
+extended (sim: to 384; live: 32/48/64/96/128/192/256 at 1800 s per point) to find the
+rollover.
+
+**Headline-point selection rule (revised 2026-08-10, user decision): best performance
+with BOTH policies pre-knee.** The chosen comparison cell is the highest-load point at
+which round-robin's admission queue still drains (RR TTFT p95 ≤ ~5 s and stable) — sim
+prediction: **3:3 at concurrency 48** (KV ≈ 2.2–2.5k tok/s @ 0.4–0.8 s vs RR ≈ 2.1k @
+4.65 s; ~6–11× TTFT p95 gap with zero overload asterisk). Conc 48 added to the live
+sweep for direct measurement; the post-knee cells (96–256) are still measured and
+reported as the capacity-knee curve, but the headline number comes from the
+both-healthy cell. Ceiling and iso-latency-budget framings remain as supporting views.
 
 **Two impact framings (both computed; report both):**
 1. **Iso-config gap** (the dramatic one): same P:D + conc, KV vs RR — expected outcome:

@@ -176,7 +176,7 @@ spec:
         - name: TRACE_FILE
           value: /model-cache/traces/weka_256k_aiperf.jsonl
         - name: CONCURRENCIES
-          value: "32,64,96,128,192,256"
+          value: "32,48,64,96,128,192,256"
         - name: BENCHMARK_DURATION
           value: "1800"
         - name: TTFT_THRESHOLD_MS
