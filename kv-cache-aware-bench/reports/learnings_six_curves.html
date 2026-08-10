@@ -110,7 +110,7 @@ panel('p4','4 · Throughput vs concurrency by P:D split',
 function frontier(pts){const s=[...pts].sort((a,b)=>b.x-a.x||b.y-a.y);const f=[];let by=-1;
  for(const p of s){if(p.y>by){f.push(p);by=p.y;}}return f.sort((a,b)=>a.x-b.x);}
 panel('p5','5 · Efficiency frontier — tok/s/GPU vs tok/s/user',
- 'All 3:3 cells; frontier lines per policy; hollow = TTFT p95 above 5 s',()=> {
+ 'Efficient hull per policy (dominated cells omitted); hollow = TTFT p95 above 5 s',()=> {
   const all=Object.values(D.cloud).flat();
   const xmax=Math.max(...all.map(p=>p.x))*1.08,ymax=Math.max(...all.map(p=>p.y))*1.1;
   const X=v=>M.l+(v/xmax)*(PW-M.l-M.r),Y=v=>PH-M.b-(v/ymax)*(PH-M.t-M.b);
@@ -118,7 +118,7 @@ panel('p5','5 · Efficiency frontier — tok/s/GPU vs tok/s/user',
   for(const f of ORDER){const pts=D.cloud[f];if(!pts)continue;const c=FAM[f][1];
    const fr=frontier(pts);
    g+=`<path d="${fr.map((p,i)=>`${i?'L':'M'}${X(p.x)} ${Y(p.y)}`).join('')}" fill="none" stroke="var(--${c})" stroke-width="2" opacity=".85"/>`;
-   for(const p of pts){const hollow=p.ttft95>5;
+   for(const p of fr){const hollow=p.ttft95>5;
     g+=`<g class="pt" data-tip='${JSON.stringify({s:FAM[f][0],conc:p.conc,v:p.y.toFixed(1)+" tok/s/GPU",ttft95:p.ttft95})}'><circle cx="${X(p.x)}" cy="${Y(p.y)}" r="9" fill="transparent"/><circle cx="${X(p.x)}" cy="${Y(p.y)}" r="3.6" fill="${hollow?'none':`var(--${c})`}" stroke="var(--${c})" stroke-width="1.8"/></g>`;}
   }
   return g;
@@ -132,7 +132,7 @@ panel('p6','6 · Theory overlay — DynoSim vs AIC (silicon pending)',
   let g=axes(X,Y,[0,20,40,60,80],[0,40,80,120],'tok/s per user','tok/s per GPU',v=>v);
   const fr=frontier(sim);
   g+=`<path d="${fr.map((p,i)=>`${i?'L':'M'}${X(p.x)} ${Y(p.y)}`).join('')}" fill="none" stroke="var(--s3)" stroke-width="2"/>`;
-  for(const p of sim) g+=mark(X(p.x),Y(p.y),'s3',JSON.stringify({s:'DynoSim KV',conc:p.conc,v:p.y.toFixed(1)+' tok/s/GPU',ttft95:p.ttft95}),false);
+  for(const p of fr) g+=mark(X(p.x),Y(p.y),'s3',JSON.stringify({s:'DynoSim KV',conc:p.conc,v:p.y.toFixed(1)+' tok/s/GPU',ttft95:p.ttft95}),false);
   for(const p of D.aic) g+=`<g class="pt" data-tip='${JSON.stringify({s:p.label,v:p.y.toFixed(1)+" tok/s/GPU at "+p.x.toFixed(1)+" tok/s/user"})}'><circle cx="${X(p.x)}" cy="${Y(p.y)}" r="9" fill="transparent"/><rect x="${X(p.x)-3.4}" y="${Y(p.y)-3.4}" width="6.8" height="6.8" rx="1.4" fill="var(--s1)"/></g>`;
   g+=`<text x="${PW-M.r-4}" y="${M.t+12}" text-anchor="end" font-size="10.5" fill="var(--muted)">silicon points: round-1 chain in flight</text>`;
   return g;

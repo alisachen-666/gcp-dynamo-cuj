@@ -283,7 +283,7 @@ data:
     moe_expert_parallel_size: 4
     moe_tensor_parallel_size: 1
     moe_config:
-      backend: WIDEEP
+      backend: TRTLLM  # aic said WIDEEP; its runner API (1.3.0rc14) crashes on runtime 1.3.1 (run_moe arg mismatch)
     tensor_parallel_size: 4
     pipeline_parallel_size: 1
     enable_attention_dp: true
@@ -312,7 +312,7 @@ data:
     moe_tensor_parallel_size: 4
     moe_expert_parallel_size: 1
     moe_config:
-      backend: WIDEEP
+      backend: CUTLASS  # aic said WIDEEP; incompatible with runtime 1.3.1 — see prefill note
     enable_chunked_prefill: false
     # per-rank cap; global 16/worker = headroom over conc32/5 workers
     max_batch_size: 4

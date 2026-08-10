@@ -18,7 +18,7 @@ run_arm() {
   kubectl rollout restart deployment "$dgd-frontend" "$dgd-prefill" "$dgd-decode" -n $NS >> "$LOG" 2>&1
   # wait for 7 ready pods (1 FE + 3P + 3D), up to 70 min (cold weight loads)
   local ok=0
-  for i in $(seq 1 70); do
+  for i in $(seq 1 150); do
     sleep 60
     local ready total
     ready=$(kubectl get pods -n $NS -l "nvidia.com/dynamo-graph-deployment-name=$dgd" --no-headers 2>/dev/null | awk '$2=="2/2" || $2=="1/1"' | wc -l)

@@ -141,12 +141,13 @@ def sweep(trace, conc_list, out_csv):
         ("rr", None),
         ("ll", None),
         ("kv-nvda", {"prefill_load_scale": 1.0, "overlap_credit": 1.0}),
-        ("kv-t-c0.7", {"prefill_load_scale": 2.0, "overlap_credit": 0.7}),
-        ("kv-t-c0.85", {"prefill_load_scale": 2.0, "overlap_credit": 0.85}),
-        ("kv-t-c1.0", {"prefill_load_scale": 2.0, "overlap_credit": 1.0}),
+        *[(f"kv-t-c{c}", {"prefill_load_scale": 2.0, "overlap_credit": c})
+          for c in (0.5, 0.6, 0.7, 0.8, 0.9, 1.0)],
+        *[(f"kv-s{s}-c0.8", {"prefill_load_scale": s, "overlap_credit": 0.8})
+          for s in (1.5, 3.0)],
     ]
     rows = []
-    for np_, nd in [(1, 5), (2, 4), (3, 3)]:
+    for np_, nd in [(1, 5), (2, 4), (3, 3), (4, 2), (5, 1)]:
         for conc in conc_list:
             cell = {}
             for name, rt in POLICIES:
@@ -189,10 +190,10 @@ if __name__ == "__main__":
                 break
     if args.sweep:
         print(f"DynoSim sweep: {len(trace)} requests, 24 GPUs, SLA: ttft95<=5s tpot<=20ms")
-        sweep(trace, [16, 32, 64, 96, 128, 192, 256, 384], args.out)
+        sweep(trace, [8, 16, 24, 32, 48, 64, 96, 128, 160, 192, 256, 320, 384], args.out)
     else:
         print(f"DynoSim: {len(trace)} requests, conc {args.conc}, 24 GPUs (4/worker)")
-        for np_, nd in [(1, 5), (2, 4), (3, 3)]:
+        for np_, nd in [(1, 5), (2, 4), (3, 3), (4, 2), (5, 1)]:
             for pol in ["rr", "kv"]:
                 m = simulate(trace, np_, nd, pol, args.conc)
                 print(f"{np_}:{nd} {pol:>3} req/s={m['req_per_s']:.2f} tok/s={m['throughput_tok_s']:.0f} "

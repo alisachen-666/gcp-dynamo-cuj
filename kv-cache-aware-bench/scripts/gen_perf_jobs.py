@@ -16,6 +16,8 @@ FULL_TRACE = "/model-cache/traces/weka_256k_aiperf.jsonl"
 
 # arm -> (dgd name, concurrencies)
 ARMS = {
+    "agg1n-rr": ("kimi-k25-agg1n-rr", "32,48,64,96"),
+    "agg1n-kvt": ("kimi-k25-agg1n-kvt", "32,48,64,96"),
     "arm1a-agg-eagle-rr": ("kimi-k25-agg-rr-eagle", "24"),
     "arm1a-agg-eagle-kv": ("kimi-k25-agg-kv-eagle", "24"),
     "arm1b-agg-rr": ("kimi-k25-agg-rr", "8"),

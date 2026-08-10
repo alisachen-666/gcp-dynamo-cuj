@@ -5,7 +5,8 @@ metadata:
   namespace: dynamo-cloud
 data:
   prefill.yaml: "backend: pytorch\nmoe_expert_parallel_size: 4\nmoe_tensor_parallel_size:\
-    \ 1\nmoe_config:\n  backend: WIDEEP\ntensor_parallel_size: 4\npipeline_parallel_size:\
+    \ 1\nmoe_config:\n  backend: TRTLLM  # aic said WIDEEP; its runner API (1.3.0rc14)\
+    \ crashes on runtime 1.3.1 (run_moe arg mismatch)\ntensor_parallel_size: 4\npipeline_parallel_size:\
     \ 1\nenable_attention_dp: true\n# aic: false (one-shot 137k prefill); we enable\
     \ it because trace p99 input\n# is 252k > max_num_tokens \u2014 tail requests\
     \ need chunking\nenable_chunked_prefill: true\nmax_batch_size: 1\nmax_num_tokens:\
@@ -15,13 +16,13 @@ data:
     \ true\nprint_iter_log: false\n"
   decode.yaml: "backend: pytorch\ntensor_parallel_size: 4\npipeline_parallel_size:\
     \ 1\nenable_attention_dp: true\nmoe_tensor_parallel_size: 4\nmoe_expert_parallel_size:\
-    \ 1\nmoe_config:\n  backend: WIDEEP\nenable_chunked_prefill: false\n# per-rank\
-    \ cap; global 16/worker = headroom over conc32/5 workers\nmax_batch_size: 4\n\
-    max_num_tokens: 64\nmax_seq_len: 262144\ntrust_remote_code: true\nkv_cache_config:\n\
-    \  free_gpu_memory_fraction: 0.8\n  dtype: fp8\n  tokens_per_block: 32\n  enable_block_reuse:\
-    \ true\ncache_transceiver_config:\n  backend: DEFAULT\n  max_tokens_in_buffer:\
-    \ 138624\ncuda_graph_config:\n  enable_padding: true\n  batch_sizes:\n  - 1\n\
-    \  - 2\n  - 3\n  - 4\n  - 8\nprint_iter_log: false\n"
+    \ 1\nmoe_config:\n  backend: CUTLASS  # aic said WIDEEP; incompatible with runtime\
+    \ 1.3.1 \u2014 see prefill note\nenable_chunked_prefill: false\n# per-rank cap;\
+    \ global 16/worker = headroom over conc32/5 workers\nmax_batch_size: 4\nmax_num_tokens:\
+    \ 64\nmax_seq_len: 262144\ntrust_remote_code: true\nkv_cache_config:\n  free_gpu_memory_fraction:\
+    \ 0.8\n  dtype: fp8\n  tokens_per_block: 32\n  enable_block_reuse: true\ncache_transceiver_config:\n\
+    \  backend: DEFAULT\n  max_tokens_in_buffer: 138624\ncuda_graph_config:\n  enable_padding:\
+    \ true\n  batch_sizes:\n  - 1\n  - 2\n  - 3\n  - 4\n  - 8\nprint_iter_log: false\n"
 ---
 apiVersion: apps/v1
 kind: Deployment

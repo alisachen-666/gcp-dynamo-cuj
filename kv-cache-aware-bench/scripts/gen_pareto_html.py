@@ -136,7 +136,7 @@ th{color:var(--muted);font-weight:600} td:first-child,th:first-child{text-align:
 <div class="card">
 <h1>KV-aware routing impact — DynoSim Pareto sweep</h1>
 <div class="sub">GB300 &middot; __GPUS__ GPUs disaggregated &middot; Weka 256k agentic trace (closed-loop replay)
-&middot; no SLA gate — frontiers span all measured points; hollow marks flag TTFT p95 &gt; 5 s or TPOT &gt; 20 ms (informational)</div>
+&middot; efficient hull only (dominated cells omitted from the plot; all cells in the table view); hollow marks flag TTFT p95 &gt; 5 s or TPOT &gt; 20 ms</div>
 <div class="tiles">
 <div class="tile"><div class="tl">Highlight point &middot; KV-tuned</div><div class="tv">__KV_TOKS__ tok/s</div><div class="ts">P:D __HL_PD__ &middot; conc __HL_CONC__ &middot; TTFT p95 __KV_TTFT__ s</div></div>
 <div class="tile"><div class="tl">Round-robin, same deployment</div><div class="tv">__RR_TOKS__ tok/s</div><div class="ts">TTFT p95 __RR_TTFT__ s</div></div>
@@ -188,7 +188,7 @@ function render(){
    const last=s.front[s.front.length-1];
    g+=`<text x="${X(last.x)+8}" y="${Y(last.y)-6}" font-size="11.5" fill="var(--ink-2)">${name.split(' (')[0]}</text>`;
   }
-  for(const p of s.points){
+  for(const p of s.front){  // efficient hull only (industry convention); all cells remain in the table
    marks+=`<g class="pt" data-tip='${JSON.stringify({name,...p}).replace(/'/g,"&#39;")}'>
      <circle cx="${X(p.x)}" cy="${Y(p.y)}" r="11" fill="transparent"/>
      ${marker(s.marker,X(p.x),Y(p.y),col,!p.sla)}</g>`;
