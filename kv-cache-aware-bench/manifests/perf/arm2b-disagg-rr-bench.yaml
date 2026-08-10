@@ -18,7 +18,7 @@ metadata:
   name: kimi-k25-disagg-rr-bench
 spec:
   backoffLimit: 1
-  activeDeadlineSeconds: 7200  # 2h hard cap on the Job
+  activeDeadlineSeconds: 18000  # 2h hard cap on the Job
   completions: 1
   parallelism: 1
   template:
@@ -176,9 +176,9 @@ spec:
         - name: TRACE_FILE
           value: /model-cache/traces/weka_256k_aiperf.jsonl
         - name: CONCURRENCIES
-          value: "32,96,128"
+          value: "32,64,96,128,192,256"
         - name: BENCHMARK_DURATION
-          value: "3600"
+          value: "1800"
         - name: TTFT_THRESHOLD_MS
           value: "5000"
         - name: ITL_THRESHOLD_MS

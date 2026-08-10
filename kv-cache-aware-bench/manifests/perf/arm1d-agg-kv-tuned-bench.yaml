@@ -18,7 +18,7 @@ metadata:
   name: kimi-k25-agg-kv-tuned-bench
 spec:
   backoffLimit: 1
-  activeDeadlineSeconds: 7200  # 2h hard cap on the Job
+  activeDeadlineSeconds: 18000  # 2h hard cap on the Job
   completions: 1
   parallelism: 1
   template:
@@ -178,7 +178,7 @@ spec:
         - name: CONCURRENCIES
           value: "8"
         - name: BENCHMARK_DURATION
-          value: "3600"
+          value: "1800"
         - name: TTFT_THRESHOLD_MS
           value: "5000"
         - name: ITL_THRESHOLD_MS

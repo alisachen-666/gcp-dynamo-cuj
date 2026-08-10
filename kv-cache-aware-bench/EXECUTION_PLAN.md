@@ -131,8 +131,14 @@ for RR's (RR TTFT explodes / throughput collapses while KV cruises).
 prefill utilization, worker load imbalance. Measured over the steady-state window
 (second half of replay; first half warms caches).
 
-**SLA gate:** TTFT p95 ≤ 5 s AND TPOT p50 ≤ 20 ms (≥50 tok/s/user) — "decent TTFT" per
-2026-08-09 SLA decision.
+**SLA policy (revised 2026-08-10, user decision): NO gate.** Sweep as wide as possible
+and hunt max throughput; latency (TTFT p95, TPOT) is always REPORTED next to every
+throughput number but never filters the sweep or the selection. The earlier
+TTFT ≤ 5 s / TPOT ≤ 20 ms pair survives only as an informational annotation
+(`sla_pass` column, hollow marks on the Pareto page) so readers can see where each
+point sits relative to the recipe's goodput thresholds. Selection rule: max KV-aware
+throughput; RR reported at the same cell for the impact ratio. Concurrency axis
+extended (sim: to 384; live: 32–256 at 1800 s per point) to find the rollover.
 
 **Two impact framings (both computed; report both):**
 1. **Iso-config gap** (the dramatic one): same P:D + conc, KV vs RR — expected outcome:

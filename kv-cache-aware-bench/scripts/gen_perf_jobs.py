@@ -21,9 +21,9 @@ ARMS = {
     "arm1b-agg-rr": ("kimi-k25-agg-rr", "8"),
     "arm1c-agg-kv-nvda": ("kimi-k25-agg-kv-nvda", "8"),
     "arm1d-agg-kv-tuned": ("kimi-k25-agg-kv-tuned", "8"),
-    "arm2b-disagg-rr": ("kimi-k25-disagg-rr", "32,96,128"),
-    "arm2c-disagg-kv-nvda": ("kimi-k25-disagg-kv-nvda", "32,96,128"),
-    "arm2d-disagg-kv-tuned": ("kimi-k25-disagg-kv-tuned", "32,96,128"),
+    "arm2b-disagg-rr": ("kimi-k25-disagg-rr", "32,64,96,128,192,256"),
+    "arm2c-disagg-kv-nvda": ("kimi-k25-disagg-kv-nvda", "32,64,96,128,192,256"),
+    "arm2d-disagg-kv-tuned": ("kimi-k25-disagg-kv-tuned", "32,64,96,128,192,256"),
 }
 
 # smoke jobs: (suffix, base arm, trace file, concurrency, duration_s)
@@ -72,6 +72,7 @@ def make_job(job_name, dgd, trace, conc, duration):
                   "      annotations:\n        gke-gcsfuse/volumes: \"true\"\n"
                   "        gke-gcsfuse/memory-limit: 4Gi\n"
                   "        gke-gcsfuse/cpu-limit: \"2\"")
+    t = t.replace("activeDeadlineSeconds: 7200", "activeDeadlineSeconds: 18000")  # 3-conc sweep ~3.5h + warmup
     t = t.replace("name: kimi-k25-agg-rr-bench", f"name: {job_name}")
     t = t.replace("app: kimi-k25-agg-rr-bench", f"app: {job_name}")
     t = t.replace("- kimi-k25-agg-rr", f"- {dgd}")  # antiaffinity DGD label value
@@ -89,7 +90,7 @@ def make_job(job_name, dgd, trace, conc, duration):
 OUT.mkdir(exist_ok=True)
 for arm, (dgd, conc) in ARMS.items():
     p = OUT / f"{arm}-bench.yaml"
-    p.write_text(make_job(f"{dgd}-bench", dgd, FULL_TRACE, conc, "3600"))
+    p.write_text(make_job(f"{dgd}-bench", dgd, FULL_TRACE, conc, "1800"))
     print(f"wrote {p.name} (endpoint {dgd}-frontend:8000, conc {conc})")
 
 for suffix, arm, trace, conc, duration in SMOKES:

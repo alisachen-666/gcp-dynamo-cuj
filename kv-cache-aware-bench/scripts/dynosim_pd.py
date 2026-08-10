@@ -134,8 +134,8 @@ def simulate(trace, n_prefill, n_decode, policy, conc, router=None):
 
 
 def sweep(trace, conc_list, out_csv):
-    """Full highlight-point sweep: P:D x conc x policy; prints iso-config impact
-    and applies the SLA gate (TTFT p95 <= 5s, TPOT <= 20ms)."""
+    """Full sweep: P:D x conc x policy; no SLA gate — max-throughput hunt.
+    sla_pass column retained as an informational annotation (TTFT p95 <= 5s, TPOT <= 20ms)."""
     import csv as _csv
     POLICIES = [
         ("rr", None),
@@ -156,7 +156,8 @@ def sweep(trace, conc_list, out_csv):
                 m["sla_pass"] = m["ttft_p95_s"] <= 5.0 and m["tpot_mean_ms"] <= 20.0
                 cell[name] = m
                 rows.append(m)
-            best_kv = max((m for n, m in cell.items() if n.startswith("kv") and m["sla_pass"]),
+            # no SLA gate (2026-08-10): pure max-throughput hunt; latency reported as info
+            best_kv = max((m for n, m in cell.items() if n.startswith("kv")),
                           key=lambda m: m["throughput_tok_s"], default=None)
             if best_kv:
                 rr = cell["rr"]
@@ -188,7 +189,7 @@ if __name__ == "__main__":
                 break
     if args.sweep:
         print(f"DynoSim sweep: {len(trace)} requests, 24 GPUs, SLA: ttft95<=5s tpot<=20ms")
-        sweep(trace, [16, 32, 48, 64, 96, 128, 160], args.out)
+        sweep(trace, [16, 32, 64, 96, 128, 192, 256, 384], args.out)
     else:
         print(f"DynoSim: {len(trace)} requests, conc {args.conc}, 24 GPUs (4/worker)")
         for np_, nd in [(1, 5), (2, 4), (3, 3)]:

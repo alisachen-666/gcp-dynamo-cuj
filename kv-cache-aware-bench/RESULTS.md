@@ -117,8 +117,20 @@ most highlight cells.
 **Regime finding:** optimal P:D inverts with session mixing — warm single-stream (aic)
 favors 1:5; heavy interleave favors 3:3 (aggregate cache + partition affinity; 1:5
 fails SLA entirely at 393-way mixing). Three-regime story: cold / warm-grouped /
-warm-mixed. Open items: v5 session-stream closed loop (mixing width = concurrency);
-decode model calibrated to 1 live point; live validation of the highlight point pending.
+warm-mixed.
+
+**v5 (2026-08-10, UNGATED per no-SLA decision, conc extended to 384):** the max-throughput
+hunt confirms the same point — **the global throughput ceiling of the entire 144-cell sweep
+is 3:3 / conc 128 / KV-tuned(c0.7) at 2,978 tok/s, held at TTFT p95 0.60 s**. Beyond conc
+128 KV throughput declines (active working set outgrows even partitioned caches). Ceilings
+elsewhere: 1:5 ≈ 1,045 tok/s (single prefill worker saturates; TTFT grows linearly with
+conc — pure queueing), 2:4 ≈ 1,808. Best-vs-best (each policy's own peak, no gate): KV
+2,978 vs RR 2,352 (@3:3 conc 96) — **1.27× even with no latency argument**, and at the
+peaks KV holds sub-second TTFT p95 while RR needs 20–32 s. KV TTFT stays ≈flat (0.4–3.5 s)
+across conc 64→384 at 3:3 while every cache-blind config's TTFT grows linearly. The no-SLA
+and SLA-gated selection rules pick the SAME operating point — the highlight point is the
+ceiling. Remaining caveats: decode model calibrated to one live point; 393-way mixing fixed
+(v6: mixing width = concurrency); live validation pending.
 
 ## Run Log
 

@@ -18,7 +18,7 @@ metadata:
   name: kimi-k25-disagg-rr-smoke2-mini-e2e
 spec:
   backoffLimit: 1
-  activeDeadlineSeconds: 7200  # 2h hard cap on the Job
+  activeDeadlineSeconds: 18000  # 2h hard cap on the Job
   completions: 1
   parallelism: 1
   template:

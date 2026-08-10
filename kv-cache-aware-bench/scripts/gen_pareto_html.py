@@ -59,7 +59,7 @@ def main():
 
     payload = {
         name: {"slot": FAMILIES[name][1], "marker": MARKERS[FAMILIES[name][1]],
-               "points": pts, "front": pareto_front([p for p in pts if p["sla"]])}
+               "points": pts, "front": pareto_front(pts)}
         for name, pts in series.items() if pts
     }
 
@@ -77,7 +77,7 @@ def main():
     for name in ("KV-aware (Strategy C tuned)", "KV-aware (NVDA defaults)"):
         for p in series.get(name, []):
             rr = rr_by_cell.get((p["pd"], p["conc"]))
-            if not (p["sla"] and rr):
+            if not rr:
                 continue
             ratio = p["tokps"] / max(1e-9, rr["tokps"])
             score = p["tokps"] * min(ratio, 10.0)
@@ -136,10 +136,10 @@ th{color:var(--muted);font-weight:600} td:first-child,th:first-child{text-align:
 <div class="card">
 <h1>KV-aware routing impact — DynoSim Pareto sweep</h1>
 <div class="sub">GB300 &middot; __GPUS__ GPUs disaggregated &middot; Weka 256k agentic trace (closed-loop replay)
-&middot; frontier lines connect SLA-passing points (TTFT p95 &le; 5 s, TPOT &le; 20 ms); hollow marks fail the SLA</div>
+&middot; no SLA gate — frontiers span all measured points; hollow marks flag TTFT p95 &gt; 5 s or TPOT &gt; 20 ms (informational)</div>
 <div class="tiles">
 <div class="tile"><div class="tl">Highlight point &middot; KV-tuned</div><div class="tv">__KV_TOKS__ tok/s</div><div class="ts">P:D __HL_PD__ &middot; conc __HL_CONC__ &middot; TTFT p95 __KV_TTFT__ s</div></div>
-<div class="tile"><div class="tl">Round-robin, same deployment</div><div class="tv">__RR_TOKS__ tok/s</div><div class="ts">TTFT p95 __RR_TTFT__ s &mdash; SLA fail</div></div>
+<div class="tile"><div class="tl">Round-robin, same deployment</div><div class="tv">__RR_TOKS__ tok/s</div><div class="ts">TTFT p95 __RR_TTFT__ s</div></div>
 <div class="tile"><div class="tl">KV-aware advantage</div><div class="tv">__RATIO__&times; throughput</div><div class="ts">at __TTFT_X__&times; lower TTFT p95</div></div>
 </div>
 <div id="chart"></div>
