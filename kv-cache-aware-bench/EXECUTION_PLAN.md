@@ -107,6 +107,52 @@ The disagg phases adopt the ctx/gen rate-match methodology with one KV-aware ada
    KV-tuned); hover metadata + artifact links per the guide; latency-failing points visually
    distinct.
 
+## DynoSim Sweep Methodology — Highlight-Point Selection (2026-08-09)
+
+**Objective:** find the operating point that maximizes the *visible impact of KV-aware
+routing* at the largest throughput with decent TTFT, before spending silicon hours.
+
+**Mechanism being exploited:** with P prefill workers, RR lands a session turn on its
+prefix-holding worker ~1/P of the time → RR re-prefills ≈ (1−1/P)·context per turn
+(cache-size independent). KV-aware holds ~97% affinity. Routing impact therefore grows
+with P; warm-traffic throughput wants small P. The highlight point is where prefill
+capacity is just-sufficient for KV-aware's effective load but drastically insufficient
+for RR's (RR TTFT explodes / throughput collapses while KV cruises).
+
+**Sweep axes (full cross product in DynoSim, minutes per cell):**
+- P:D split: {1:5, 2:4, 3:3} on 24 GPUs (later {n_p : 18−n_p} on 72)
+- Closed-loop concurrency: {8, 16, 24, 32, 48, 64, 96}
+- Policy: {rr, least-loaded, kv-nvda (scale 1.0/credit 1.0), kv-tuned (scale 2.0 ×
+  credit {0.7, 0.85, 1.0})}
+- Sensitivity: KV capacity ×{0.5, 1, 2} on the top candidates (robustness of the story
+  to cache-size assumptions)
+
+**Metrics per cell:** throughput (tok/s), TTFT p50/p95/p99, TPOT, prefix hit rate,
+prefill utilization, worker load imbalance. Measured over the steady-state window
+(second half of replay; first half warms caches).
+
+**SLA gate:** TTFT p95 ≤ 5 s AND TPOT p50 ≤ 20 ms (≥50 tok/s/user) — "decent TTFT" per
+2026-08-09 SLA decision.
+
+**Two impact framings (both computed; report both):**
+1. **Iso-config gap** (the dramatic one): same P:D + conc, KV vs RR — expected outcome:
+   KV passes SLA, RR blows TTFT. Headline: "at this deployment, KV-aware routing is the
+   difference between meeting SLA and not."
+2. **Iso-SLA best-vs-best** (the rigorous one): each policy gets its own best config;
+   compare max SLA-passing throughput. Headline: "KV-aware serves X× the throughput at
+   equal SLA." Immune to the "you hobbled RR" critique.
+
+**Highlight-point selection rule:** among cells where KV-aware passes the SLA, maximize
+`KV_throughput × min(KV_throughput / RR_throughput_at_same_cell, cap=10)` — throughput-
+weighted impact, capped so degenerate RR collapse doesn't dominate the choice. Sanity
+requirement: the chosen point's RR arm must also be measurable (finite results), so both
+arms produce publishable numbers.
+
+**Calibration loop (theory ↔ silicon, per pareto-benchmarking guide):** seed rates from
+aic SILICON solves → sweep → validate top-2 candidates with live S3-style short runs →
+refit PREFILL_TOKRATE / TPOT curve from measured → re-sweep → lock the highlight point
+for official runs. DynoSim runs on the VM, parallel to all cluster work.
+
 ## Phase 1: 24-GPU Aggregated Benchmarks (NVDA Recipe + Trace Replay)
 
 ```text

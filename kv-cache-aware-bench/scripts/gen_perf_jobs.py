@@ -21,9 +21,9 @@ ARMS = {
     "arm1b-agg-rr": ("kimi-k25-agg-rr", "8"),
     "arm1c-agg-kv-nvda": ("kimi-k25-agg-kv-nvda", "8"),
     "arm1d-agg-kv-tuned": ("kimi-k25-agg-kv-tuned", "8"),
-    "arm2b-disagg-rr": ("kimi-k25-disagg-rr", "32"),
-    "arm2c-disagg-kv-nvda": ("kimi-k25-disagg-kv-nvda", "32"),
-    "arm2d-disagg-kv-tuned": ("kimi-k25-disagg-kv-tuned", "32"),
+    "arm2b-disagg-rr": ("kimi-k25-disagg-rr", "32,96,128"),
+    "arm2c-disagg-kv-nvda": ("kimi-k25-disagg-kv-nvda", "32,96,128"),
+    "arm2d-disagg-kv-tuned": ("kimi-k25-disagg-kv-tuned", "32,96,128"),
 }
 
 # smoke jobs: (suffix, base arm, trace file, concurrency, duration_s)

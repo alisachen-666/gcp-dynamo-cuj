@@ -91,6 +91,35 @@ inert here: KV offloading is disabled in all arms.
    approximate; the P:D-ratio and shape conclusions are robust, per-point numbers get
    silicon validation anyway.
 
+## DynoSim P:D × Routing Sweep (v4, 2026-08-09)
+
+Methodology in EXECUTION_PLAN.md ("DynoSim Sweep Methodology"); simulator
+`scripts/dynosim_pd.py`; sweeps archived as `aic-results/dynosim_sweep_v{1..4}.csv`;
+interactive Pareto page `reports/pareto_dynosim_v4.html` (also published as artifact).
+
+**Calibration lineage (each iteration fixed a real modeling error):**
+- v1: prefill rate seeded from warm seq-rate — 30× too cheap for RR misses (ratio≡1.0).
+- v2: cold-solve uncached rate (65k tok/s/worker) — TTFT separation appeared (RR 2–3×
+  worse), throughput still tied: decode model too pessimistic vs live S4.
+- v3: decode TPOT recalibrated from live S4 (slope 0.75→0.1 ms/seq) — high-conc cells
+  entered SLA range; still no throughput separation → exposed that the trace was
+  session-GROUPED (closed-loop replay held only ~5 sessions in flight; caches never
+  pressured; also affects live aiperf replay — trace re-ordered for both).
+- v4: session-interleaved trace (393-way round-robin) — **separation emerged**.
+
+**v4 highlight point (per selection rule):** P:D **3:3, conc 128, KV-tuned (scale 2.0,
+credit 0.7)**: 2,978 tok/s (124 tok/s/GPU) at TTFT p95 **0.60 s**, vs same-deployment
+round-robin 2,304 tok/s at TTFT p95 **31.7 s (SLA fail)** — 1.29× throughput at ~53×
+lower tail latency. RR's admission queue explodes with concurrency (9.2 s @64 → 20 s
+@96 → 43 s @160) while KV-aware *improves*. Strategy C tuned beats KV-NVDA defaults at
+most highlight cells.
+
+**Regime finding:** optimal P:D inverts with session mixing — warm single-stream (aic)
+favors 1:5; heavy interleave favors 3:3 (aggregate cache + partition affinity; 1:5
+fails SLA entirely at 393-way mixing). Three-regime story: cold / warm-grouped /
+warm-mixed. Open items: v5 session-stream closed loop (mixing width = concurrency);
+decode model calibrated to 1 live point; live validation of the highlight point pending.
+
 ## Run Log
 
 | Date | Phase | Arm | Config | Status | Notes |

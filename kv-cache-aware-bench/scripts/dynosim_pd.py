@@ -24,9 +24,9 @@ from collections import OrderedDict
 
 BLOCK_TOKENS = 64
 # --- aic SILICON warm-solve derived constants (gb300, trtllm, 137k ISL) ---
-PREFILL_TOKRATE = 713_000    # tokens/s per 4-GPU prefill worker (5.202 seq/s x 137k)
-TPOT_BASE_MS = 14.5          # fit to aic pareto: (bs/worker=2 -> 15.9), (4 -> 17.6), (12 -> 23.4)
-TPOT_SLOPE_MS = 0.75
+PREFILL_TOKRATE = 65_000    # UNCACHED tok/s per 4-GPU worker (aic cold solve: 137k tok / 8.4s per DP slot x4)
+TPOT_BASE_MS = 14.3          # recalibrated vs live S4: ITL p50 15.4ms @ ~11 seq/worker
+TPOT_SLOPE_MS = 0.1
 KV_CAPACITY_TOKENS = 11_900_000  # per prefill worker: 4 GPU x ~104GB free x 0.8 / 35KB/token
 ROUTER = {"prefill_load_scale": 1.0, "overlap_credit": 1.0}  # KV-NVDA defaults; tuned arm overrides
 
@@ -62,10 +62,10 @@ class PrefillWorker:
         return sum(b for _, b in self.queued)
 
 
-def simulate(trace, n_prefill, n_decode, policy, conc, router=ROUTER):
+def simulate(trace, n_prefill, n_decode, policy, conc, router=None):
+    router = router or ROUTER
     P = [PrefillWorker() for _ in range(n_prefill)]
     D_load = [0] * n_decode              # in-flight sequences per decode worker
-    D_free = []                          # heap of (finish_time, worker, ) decode completions
     rr_i = 0
     results = []
     hits = tot_blocks = 0
@@ -83,6 +83,9 @@ def simulate(trace, n_prefill, n_decode, policy, conc, router=ROUTER):
             # --- route ---
             if policy == "rr":
                 w = rr_i % n_prefill; rr_i += 1
+                ov = P[w].overlap_blocks(hid)
+            elif policy == "ll":  # least-loaded (queued blocks), cache-blind
+                w = min(range(n_prefill), key=lambda i: P[i].load_blocks(now))
                 ov = P[w].overlap_blocks(hid)
             else:  # kv-aware: verified worker_logit, argmin
                 best, w, ov = None, 0, 0
@@ -112,17 +115,61 @@ def simulate(trace, n_prefill, n_decode, policy, conc, router=ROUTER):
             done_t, d = heapq.heappop(inflight)
             now = max(now, done_t)
             D_load[d] -= 1
-    dur = max(x[3] for x in results)
-    ttfts = sorted(x[0] for x in results)
-    out_tokens = sum(x[2] for x in results)
+    # steady-state window: second half of requests (first half warms caches)
+    half = len(results) // 2
+    ss = results[half:]
+    t0 = min(x[3] for x in ss) - max(x[1] for x in ss) / 1000 * max(x[2] for x in ss)
+    dur = max(x[3] for x in ss) - min(x[3] for x in ss) or 1e-9
+    ttfts = sorted(x[0] for x in ss)
+    out_tokens = sum(x[2] for x in ss)
     return {
         "throughput_tok_s": out_tokens / dur,
         "ttft_p50_s": ttfts[len(ttfts) // 2],
         "ttft_p95_s": ttfts[int(len(ttfts) * 0.95)],
-        "tpot_mean_ms": sum(x[1] for x in results) / len(results),
+        "ttft_p99_s": ttfts[min(len(ttfts) - 1, int(len(ttfts) * 0.99))],
+        "tpot_mean_ms": sum(x[1] for x in ss) / len(ss),
         "hit_rate": hits / max(1, tot_blocks),
-        "req_per_s": len(results) / dur,
+        "req_per_s": len(ss) / dur,
     }
+
+
+def sweep(trace, conc_list, out_csv):
+    """Full highlight-point sweep: P:D x conc x policy; prints iso-config impact
+    and applies the SLA gate (TTFT p95 <= 5s, TPOT <= 20ms)."""
+    import csv as _csv
+    POLICIES = [
+        ("rr", None),
+        ("ll", None),
+        ("kv-nvda", {"prefill_load_scale": 1.0, "overlap_credit": 1.0}),
+        ("kv-t-c0.7", {"prefill_load_scale": 2.0, "overlap_credit": 0.7}),
+        ("kv-t-c0.85", {"prefill_load_scale": 2.0, "overlap_credit": 0.85}),
+        ("kv-t-c1.0", {"prefill_load_scale": 2.0, "overlap_credit": 1.0}),
+    ]
+    rows = []
+    for np_, nd in [(1, 5), (2, 4), (3, 3)]:
+        for conc in conc_list:
+            cell = {}
+            for name, rt in POLICIES:
+                pol = "kv" if name.startswith("kv") else name
+                m = simulate(trace, np_, nd, pol, conc, rt)
+                m.update(pd=f"{np_}:{nd}", conc=conc, policy=name)
+                m["sla_pass"] = m["ttft_p95_s"] <= 5.0 and m["tpot_mean_ms"] <= 20.0
+                cell[name] = m
+                rows.append(m)
+            best_kv = max((m for n, m in cell.items() if n.startswith("kv") and m["sla_pass"]),
+                          key=lambda m: m["throughput_tok_s"], default=None)
+            if best_kv:
+                rr = cell["rr"]
+                ratio = best_kv["throughput_tok_s"] / max(1e-9, rr["throughput_tok_s"])
+                impact = best_kv["throughput_tok_s"] * min(ratio, 10.0)
+                print(f"  {np_}:{nd} conc={conc:>3} best-kv={best_kv['policy']:<10} "
+                      f"kv_tok/s={best_kv['throughput_tok_s']:8.0f} (ttft95 {best_kv['ttft_p95_s']:6.2f}s) "
+                      f"rr_tok/s={rr['throughput_tok_s']:8.0f} (ttft95 {rr['ttft_p95_s']:7.2f}s"
+                      f"{'' if rr['sla_pass'] else ' FAIL'}) ratio={ratio:5.2f} impact={impact:9.0f}")
+    with open(out_csv, "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        w.writeheader(); w.writerows(rows)
+    print(f"wrote {len(rows)} cells -> {out_csv}")
 
 
 if __name__ == "__main__":
@@ -130,6 +177,8 @@ if __name__ == "__main__":
     ap.add_argument("trace")
     ap.add_argument("--conc", type=int, default=32)
     ap.add_argument("--requests", type=int, default=4000)
+    ap.add_argument("--sweep", action="store_true", help="full highlight-point sweep")
+    ap.add_argument("--out", default="dynosim_sweep.csv")
     args = ap.parse_args()
     trace = []
     with open(args.trace) as f:
@@ -137,12 +186,14 @@ if __name__ == "__main__":
             trace.append(json.loads(line))
             if len(trace) >= args.requests:
                 break
-    print(f"DynoSim v0: {len(trace)} requests, conc {args.conc}, 24 GPUs (4/worker)")
-    print(f"{'P:D':>6} {'policy':>6} {'req/s':>7} {'tok/s':>8} {'ttft_p50':>9} "
-          f"{'ttft_p95':>9} {'tpot_ms':>8} {'hit%':>6}")
-    for np_, nd in [(1, 5), (2, 4), (3, 3)]:
-        for pol in ["rr", "kv"]:
-            m = simulate(trace, np_, nd, pol, args.conc)
-            print(f"{np_}:{nd:>4} {pol:>6} {m['req_per_s']:7.2f} {m['throughput_tok_s']:8.0f} "
-                  f"{m['ttft_p50_s']:8.2f}s {m['ttft_p95_s']:8.2f}s "
-                  f"{m['tpot_mean_ms']:8.1f} {100*m['hit_rate']:5.1f}")
+    if args.sweep:
+        print(f"DynoSim sweep: {len(trace)} requests, 24 GPUs, SLA: ttft95<=5s tpot<=20ms")
+        sweep(trace, [16, 32, 48, 64, 96, 128, 160], args.out)
+    else:
+        print(f"DynoSim: {len(trace)} requests, conc {args.conc}, 24 GPUs (4/worker)")
+        for np_, nd in [(1, 5), (2, 4), (3, 3)]:
+            for pol in ["rr", "kv"]:
+                m = simulate(trace, np_, nd, pol, args.conc)
+                print(f"{np_}:{nd} {pol:>3} req/s={m['req_per_s']:.2f} tok/s={m['throughput_tok_s']:.0f} "
+                      f"ttft50={m['ttft_p50_s']:.2f}s ttft95={m['ttft_p95_s']:.2f}s "
+                      f"tpot={m['tpot_mean_ms']:.1f}ms hit={100*m['hit_rate']:.1f}%")
