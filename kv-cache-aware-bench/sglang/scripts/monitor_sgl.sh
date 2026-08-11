@@ -6,7 +6,7 @@ seen_s1=""
 while true; do
   # 1. container crashes / restart growth on sgl pods
   bad=$(kubectl get pods -n $NS --no-headers 2>/dev/null | grep -E "^sgl-" | \
-        awk '$3~/CrashLoop|Error|ImagePull|CreateContainer/ || $4>1 {print $1" "$3" restarts="$4}')
+        awk '$3~/CrashLoop|Error|ImagePull|CreateContainer/ || ($4>2 && $3!="Terminating") {print $1" "$3" restarts="$4}')
   [ -n "$bad" ] && { echo "EVENT=POD_ERROR"; echo "$bad"; exit 0; }
   # 2. smoke outcome (once: marker file suppresses repeats across monitor restarts)
   if [ ! -f /tmp/.s1_reported ] && grep -qE "S1 (PASS|FAIL)" /tmp/sgl_smoke_s1.log 2>/dev/null; then

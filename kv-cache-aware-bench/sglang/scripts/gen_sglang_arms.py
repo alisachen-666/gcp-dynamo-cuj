@@ -24,6 +24,7 @@ Design decisions (validated 2026-08-11):
   - page-size 64 matches the trace's native hash block size.
 """
 import copy
+import shlex
 import sys
 from pathlib import Path
 
@@ -201,7 +202,7 @@ def worker(kind, name, dyn_ns, replicas):
         "image": SGL_IMAGE,
         "command": ["bash", "-c"],
         "args": [PIP_INSTALL + " && exec python3 -m dynamo.sglang " +
-                 " ".join(sgl_args(kind))],
+                 " ".join(shlex.quote(a) for a in sgl_args(kind))],
         "env": worker_env(dyn_ns),
         "resources": {"limits": {"nvidia.com/gpu": "4"}, "claims": [{"name": "rdma"}]},
         "securityContext": {"runAsUser": 0, "capabilities": {"add": ["IPC_LOCK"]}},
