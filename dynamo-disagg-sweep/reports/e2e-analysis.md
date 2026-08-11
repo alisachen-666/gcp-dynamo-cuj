@@ -471,6 +471,17 @@ configuration, and the GKE layer (DRA ComputeDomain for IMEX/MNNVL, JIT cache, n
 Per point we measure both KV paths and keep the better as final — path B wins wherever
 decode saturates the NVLink fabric.
 
+**Dispatch order (verified in ai-dynamo v0.8.1 source).** The frontend dispatches
+**prefill-first**: its `PrefillRouter` (`lib/llm/src/kv_router/prefill_router.rs`) calls a
+prefill worker *before* routing to decode, receives `bootstrap_info` (host/port/room) from
+the prefill response, injects it into the request, and only then dispatches to the decode
+worker's `generate` endpoint — whose handler requires the pre-computed `bootstrap_info`
+(`decode_handler.py`). The decode engine joins the bootstrap room, preallocates KV, and the
+KV transfer then runs engine-to-engine over path A or B while decode allocation overlapped
+prefill compute.
+
+![Frontend dispatch order — prefill-first sequence](figures/ft-dispatch-flow.svg)
+
 **"2× warmup + 10× measured"** (the client methodology, from the InferenceX harness): for a
 point at concurrency *C*, the client first sends **2×C requests that are discarded** —
 warming the server to steady state (KV caches filled, batch scheduler at stable depth,
