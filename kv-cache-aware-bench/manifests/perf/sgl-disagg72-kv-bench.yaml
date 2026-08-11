@@ -78,7 +78,7 @@ spec:
             curl -s "http://$ENDPOINT/v1/models" | jq .
           }
 
-          if [ ! -f "${TRACE_FILE}" ]; then
+          if false; then
             echo "ERROR: trace file not found at ${TRACE_FILE}"
             echo "Copy it onto the PVC via a helper pod, e.g.:"
             echo "  kubectl cp <local_trace.jsonl> <ns>/<helper-pod>:${TRACE_FILE}"
@@ -92,6 +92,7 @@ spec:
           mkdir -p $CACHE/snapshots/local $CACHE/refs
           cp /model-cache/alisachen/Kimi-K2.5-NVFP4/*.json /model-cache/alisachen/Kimi-K2.5-NVFP4/*.py /model-cache/alisachen/Kimi-K2.5-NVFP4/*.jinja /model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true
           printf local > $CACHE/refs/main
+          cp -r /model-cache/hf-cache/hub/datasets--semianalysisai--cc-traces-weka-062126-256k /tmp/hf/hub/ 2>/dev/null && echo 'weka dataset staged from PVC' || echo 'WARN: weka dataset not in PVC cache'
           export HF_HUB_OFFLINE=1
           ls $CACHE/snapshots/local/ | head -20
 
@@ -132,10 +133,8 @@ spec:
             -m "${TARGET_MODEL}" \
             --tokenizer "${TARGET_MODEL}" \
             --tokenizer-trust-remote-code \
-            --input-file "${TRACE_FILE}" \
-            --custom-dataset-type mooncake_trace \
-              --isl-block-size 64 \
-              --no-fixed-schedule \
+            --public-dataset semianalysis_cc_traces_weka_062126_256k \
+            --no-fixed-schedule \
               --ignore-trace-delays \
             --isl-block-size 64 \
             --no-fixed-schedule \
@@ -165,9 +164,7 @@ spec:
               -m "${TARGET_MODEL}" \
               --tokenizer "${TARGET_MODEL}" \
               --tokenizer-trust-remote-code \
-              --input-file "${TRACE_FILE}" \
-              --custom-dataset-type mooncake_trace \
-              --isl-block-size 64 \
+              --public-dataset semianalysis_cc_traces_weka_062126_256k \
               --no-fixed-schedule \
               --ignore-trace-delays \
               --url "http://${ENDPOINT}" \

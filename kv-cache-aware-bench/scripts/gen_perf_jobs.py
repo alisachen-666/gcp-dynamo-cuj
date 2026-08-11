@@ -97,17 +97,28 @@ def make_job(job_name, dgd, trace, conc, duration):
         "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.jinja "
         "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true\n"
         "          printf local > $CACHE/refs/main\n"
+        "          cp -r /model-cache/hf-cache/hub/datasets--semianalysisai--cc-traces-weka-062126-256k /tmp/hf/hub/ 2>/dev/null "
+        "&& echo 'weka dataset staged from PVC' || echo 'WARN: weka dataset not in PVC cache'\n"
         "          export HF_HUB_OFFLINE=1\n"
         "          ls $CACHE/snapshots/local/ | head -20\n",
         1)
+    # the trace-file existence gate is obsolete under --public-dataset
+    t = t.replace('if [ ! -f "${TRACE_FILE}" ]; then', 'if false; then')
     t = t.replace("value: nvidia/Kimi-K2.5-NVFP4", "value: alisachen/Kimi-K2.5-NVFP4")
-    # our trace uses the dataset's native 64-token hash blocks; aiperf's
-    # mooncake loader defaults to 512 and rejects the trace without this.
-    # needs aiperf >= 0.12.0 — in 0.10.0 (recipe pin) --isl-block-size is
-    # synthetic-only and aborts when combined with --input-file
     t = t.replace('pip install "aiperf==0.10.0"', 'pip install "aiperf==0.12.0" tiktoken blobfile')
+    # NATIVE weka loader (2026-08-11 pivot): our mooncake conversion hit aiperf's
+    # non-deterministic block synthesis — with --workers-max N each worker process
+    # synthesized DIFFERENT text for the same hash_id, so no two requests shared
+    # a prefix on the wire (59 sampled requests -> 58 unique prefixes despite the
+    # trace offering 84.6% block reuse). Silicon showed 0 cached tokens + router
+    # predicted-hit 0 for 98% of requests while a manual repeated prompt hit
+    # 1216/1234 cached. The SemiAnalysisCCTracesWeka loader keys block content by
+    # (trace_id, hash_id) via HashIdRandomGenerator — deterministic cross-process.
+    # Dataset pre-staged to /model-cache/hf-cache (pods run HF_HUB_OFFLINE=1).
+    t = t.replace("--input-file '${TRACE_FILE}' \\", "--public-dataset semianalysis_cc_traces_weka_062126_256k \\")
+    t = t.replace('--input-file "${TRACE_FILE}" \\', "--public-dataset semianalysis_cc_traces_weka_062126_256k \\")
     t = t.replace("--custom-dataset-type mooncake_trace \\",
-                  "--custom-dataset-type mooncake_trace \\\n              --isl-block-size 64 \\\n              --no-fixed-schedule \\\n              --ignore-trace-delays \\")
+                  "--no-fixed-schedule \\\n              --ignore-trace-delays \\")
     # model-cache is gcsfuse: sidecar injection annotation required
     t = t.replace("      labels:\n        app: kimi-k25-agg-rr-bench",
                   "      labels:\n        app: kimi-k25-agg-rr-bench\n"
