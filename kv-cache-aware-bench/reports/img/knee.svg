@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="system-ui,sans-serif">
+<rect width="760" height="440" fill="#fcfcfb"/>
+<text x="64" y="18" font-size="14" font-weight="600" fill="#0b0b0b">TTFT p95 vs concurrency — the capacity knee (3:3, DynoSim)</text>
+<text x="402.0" y="432" text-anchor="middle" font-size="12" fill="#52514e">concurrency (log scale)</text>
+<text x="16" y="208.0" text-anchor="middle" font-size="12" fill="#52514e" transform="rotate(-90 16 208.0)">TTFT p95 (s, log scale)</text>
+<line x1="64.0" y1="28" x2="64.0" y2="388" stroke="#e1e0d9"/>
+<text x="64.0" y="404" text-anchor="middle" font-size="11" fill="#898781">16</text>
+<line x1="211.4" y1="28" x2="211.4" y2="388" stroke="#e1e0d9"/>
+<text x="211.4" y="404" text-anchor="middle" font-size="11" fill="#898781">32</text>
+<line x1="297.7" y1="28" x2="297.7" y2="388" stroke="#e1e0d9"/>
+<text x="297.7" y="404" text-anchor="middle" font-size="11" fill="#898781">48</text>
+<line x1="358.9" y1="28" x2="358.9" y2="388" stroke="#e1e0d9"/>
+<text x="358.9" y="404" text-anchor="middle" font-size="11" fill="#898781">64</text>
+<line x1="445.1" y1="28" x2="445.1" y2="388" stroke="#e1e0d9"/>
+<text x="445.1" y="404" text-anchor="middle" font-size="11" fill="#898781">96</text>
+<line x1="506.3" y1="28" x2="506.3" y2="388" stroke="#e1e0d9"/>
+<text x="506.3" y="404" text-anchor="middle" font-size="11" fill="#898781">128</text>
+<line x1="553.8" y1="28" x2="553.8" y2="388" stroke="#e1e0d9"/>
+<text x="553.8" y="404" text-anchor="middle" font-size="11" fill="#898781">160</text>
+<line x1="592.6" y1="28" x2="592.6" y2="388" stroke="#e1e0d9"/>
+<text x="592.6" y="404" text-anchor="middle" font-size="11" fill="#898781">192</text>
+<line x1="653.8" y1="28" x2="653.8" y2="388" stroke="#e1e0d9"/>
+<text x="653.8" y="404" text-anchor="middle" font-size="11" fill="#898781">256</text>
+<line x1="740.0" y1="28" x2="740.0" y2="388" stroke="#e1e0d9"/>
+<text x="740.0" y="404" text-anchor="middle" font-size="11" fill="#898781">384</text>
+<line x1="64" y1="471.3" x2="740" y2="471.3" stroke="#e1e0d9"/>
+<text x="57" y="475.3" text-anchor="end" font-size="11" fill="#898781">0.1s</text>
+<line x1="64" y1="333.3" x2="740" y2="333.3" stroke="#e1e0d9"/>
+<text x="57" y="337.3" text-anchor="end" font-size="11" fill="#898781">1s</text>
+<line x1="64" y1="236.9" x2="740" y2="236.9" stroke="#e1e0d9"/>
+<text x="57" y="240.9" text-anchor="end" font-size="11" fill="#898781">5s</text>
+<line x1="64" y1="195.4" x2="740" y2="195.4" stroke="#e1e0d9"/>
+<text x="57" y="199.4" text-anchor="end" font-size="11" fill="#898781">10s</text>
+<line x1="64" y1="57.4" x2="740" y2="57.4" stroke="#e1e0d9"/>
+<text x="57" y="61.4" text-anchor="end" font-size="11" fill="#898781">100s</text>
+<line x1="64" y1="236.9" x2="740" y2="236.9" stroke="#898781" stroke-dasharray="5 4"/>
+<text x="736" y="231.9" text-anchor="end" font-size="10.5" fill="#898781">recipe goodput 5 s</text>
+<path d="M64.0 279.0L211.4 270.4L297.7 241.2L358.9 200.1L445.1 153.5L506.3 126.2L553.8 108.6L592.6 94.1L653.8 75.6L740.0 48.2" fill="none" stroke="#2a78d6" stroke-width="2.2"/>
+<circle cx="64.0" cy="279.0" r="3.4" fill="#2a78d6"/>
+<circle cx="211.4" cy="270.4" r="3.4" fill="#2a78d6"/>
+<circle cx="297.7" cy="241.2" r="3.4" fill="#2a78d6"/>
+<circle cx="358.9" cy="200.1" r="3.4" fill="#2a78d6"/>
+<circle cx="445.1" cy="153.5" r="3.4" fill="#2a78d6"/>
+<circle cx="506.3" cy="126.2" r="3.4" fill="#2a78d6"/>
+<circle cx="553.8" cy="108.6" r="3.4" fill="#2a78d6"/>
+<circle cx="592.6" cy="94.1" r="3.4" fill="#2a78d6"/>
+<circle cx="653.8" cy="75.6" r="3.4" fill="#2a78d6"/>
+<circle cx="740.0" cy="48.2" r="3.4" fill="#2a78d6"/>
+<path d="M64.0 283.8L211.4 279.0L297.7 269.0L358.9 263.5L445.1 205.6L506.3 164.4L553.8 141.1L592.6 124.2L653.8 98.4L740.0 68.1" fill="none" stroke="#898781" stroke-width="2.2"/>
+<circle cx="64.0" cy="283.8" r="3.4" fill="#898781"/>
+<circle cx="211.4" cy="279.0" r="3.4" fill="#898781"/>
+<circle cx="297.7" cy="269.0" r="3.4" fill="#898781"/>
+<circle cx="358.9" cy="263.5" r="3.4" fill="#898781"/>
+<circle cx="445.1" cy="205.6" r="3.4" fill="#898781"/>
+<circle cx="506.3" cy="164.4" r="3.4" fill="#898781"/>
+<circle cx="553.8" cy="141.1" r="3.4" fill="#898781"/>
+<circle cx="592.6" cy="124.2" r="3.4" fill="#898781"/>
+<circle cx="653.8" cy="98.4" r="3.4" fill="#898781"/>
+<circle cx="740.0" cy="68.1" r="3.4" fill="#898781"/>
+<path d="M64.0 301.9L211.4 352.2L297.7 384.7L358.9 382.7L445.1 373.4L506.3 343.9L553.8 332.4L592.6 332.2L653.8 314.0L740.0 204.4" fill="none" stroke="#eb6834" stroke-width="2.2"/>
+<circle cx="64.0" cy="301.9" r="3.4" fill="#eb6834"/>
+<circle cx="211.4" cy="352.2" r="3.4" fill="#eb6834"/>
+<circle cx="297.7" cy="384.7" r="3.4" fill="#eb6834"/>
+<circle cx="358.9" cy="382.7" r="3.4" fill="#eb6834"/>
+<circle cx="445.1" cy="373.4" r="3.4" fill="#eb6834"/>
+<circle cx="506.3" cy="343.9" r="3.4" fill="#eb6834"/>
+<circle cx="553.8" cy="332.4" r="3.4" fill="#eb6834"/>
+<circle cx="592.6" cy="332.2" r="3.4" fill="#eb6834"/>
+<circle cx="653.8" cy="314.0" r="3.4" fill="#eb6834"/>
+<circle cx="740.0" cy="204.4" r="3.4" fill="#eb6834"/>
+<path d="M64.0 298.7L211.4 342.6L297.7 386.6L358.9 388.0L445.1 381.3L506.3 371.9L553.8 364.9L592.6 362.9L653.8 348.3L740.0 316.4" fill="none" stroke="#1baf7a" stroke-width="2.2"/>
+<circle cx="64.0" cy="298.7" r="3.4" fill="#1baf7a"/>
+<circle cx="211.4" cy="342.6" r="3.4" fill="#1baf7a"/>
+<circle cx="297.7" cy="386.6" r="3.4" fill="#1baf7a"/>
+<circle cx="358.9" cy="388.0" r="3.4" fill="#1baf7a"/>
+<circle cx="445.1" cy="381.3" r="3.4" fill="#1baf7a"/>
+<circle cx="506.3" cy="371.9" r="3.4" fill="#1baf7a"/>
+<circle cx="553.8" cy="364.9" r="3.4" fill="#1baf7a"/>
+<circle cx="592.6" cy="362.9" r="3.4" fill="#1baf7a"/>
+<circle cx="653.8" cy="348.3" r="3.4" fill="#1baf7a"/>
+<circle cx="740.0" cy="316.4" r="3.4" fill="#1baf7a"/>
+<rect x="72" y="30" width="10" height="10" rx="2" fill="#2a78d6"/>
+<text x="87" y="39" font-size="11.5" fill="#52514e">Round-robin</text>
+<rect x="72" y="48" width="10" height="10" rx="2" fill="#898781"/>
+<text x="87" y="57" font-size="11.5" fill="#52514e">Least-loaded</text>
+<rect x="72" y="66" width="10" height="10" rx="2" fill="#eb6834"/>
+<text x="87" y="75" font-size="11.5" fill="#52514e">KV defaults</text>
+<rect x="72" y="84" width="10" height="10" rx="2" fill="#1baf7a"/>
+<text x="87" y="93" font-size="11.5" fill="#52514e">KV tuned</text>
+</svg>

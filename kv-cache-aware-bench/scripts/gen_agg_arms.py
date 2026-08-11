@@ -20,6 +20,7 @@ AGG_ENGINE = """    backend: pytorch
     moe_expert_parallel_size: 1
     moe_config:
       backend: CUTLASS
+      use_low_precision_moe_combine: true
     enable_chunked_prefill: true
     max_batch_size: 16
     max_num_tokens: 8192
@@ -126,7 +127,8 @@ spec:
       labels: {{app: {dgd}-worker, nvidia.com/dynamo-graph-deployment-name: {dgd}}}
       annotations:
         gke-gcsfuse/volumes: "true"
-        gke-gcsfuse/memory-limit: 4Gi
+        gke-gcsfuse/memory-limit: 8Gi
+        gke-gcsfuse/cpu-limit: "2"
         gke-gcsfuse/ephemeral-storage-limit: 1200Gi
     spec:
 {COMMON_POD}      containers:
@@ -167,7 +169,7 @@ spec:
             - {{name: UCX_IB_ROCE_SUBNET_PREFIX_LEN, value: "64"}}
             - {{name: PYTORCH_CUDA_ALLOC_CONF, value: "expandable_segments:True"}}
             - {{name: TLLM_NUMA_AWARE_WORKER_AFFINITY, value: "1"}}
-            - {{name: NCCL_MNNVL_ENABLE, value: "1"}}
+            - {{name: NCCL_MNNVL_ENABLE, value: "0"}}
             - {{name: NCCL_CUMEM_ENABLE, value: "1"}}
           startupProbe:
             httpGet: {{path: /live, port: 9090}}

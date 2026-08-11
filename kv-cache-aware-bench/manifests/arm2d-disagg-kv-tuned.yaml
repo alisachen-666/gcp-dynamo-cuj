@@ -313,6 +313,12 @@ data:
     moe_expert_parallel_size: 1
     moe_config:
       backend: CUTLASS  # aic said WIDEEP; incompatible with runtime 1.3.1 — see prefill note
+      use_low_precision_moe_combine: true  # recipe parity (GB200 decode)
+    nvfp4_gemm_config:
+      allowed_backends:
+        - cutlass
+        - cublaslt
+        - cuda_core
     enable_chunked_prefill: false
     # per-rank cap; global 16/worker = headroom over conc32/5 workers
     max_batch_size: 4

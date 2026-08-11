@@ -15,16 +15,16 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kimi-k25-disagg-rr-smoke2-mini-e2e
+  name: alisachen-kimi-k25-disagg-rr-smoke2-mini-e2e
 spec:
   backoffLimit: 1
-  activeDeadlineSeconds: 18000  # 2h hard cap on the Job
+  activeDeadlineSeconds: 28800  # 2h hard cap on the Job
   completions: 1
   parallelism: 1
   template:
     metadata:
       labels:
-        app: kimi-k25-disagg-rr-smoke2-mini-e2e
+        app: alisachen-kimi-k25-disagg-rr-smoke2-mini-e2e
       annotations:
         gke-gcsfuse/volumes: "true"
         gke-gcsfuse/memory-limit: 4Gi

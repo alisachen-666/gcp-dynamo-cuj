@@ -17,7 +17,9 @@ data:
   decode.yaml: "backend: pytorch\ntensor_parallel_size: 4\npipeline_parallel_size:\
     \ 1\nenable_attention_dp: true\nmoe_tensor_parallel_size: 4\nmoe_expert_parallel_size:\
     \ 1\nmoe_config:\n  backend: CUTLASS  # aic said WIDEEP; incompatible with runtime\
-    \ 1.3.1 \u2014 see prefill note\nenable_chunked_prefill: false\n# per-rank cap;\
+    \ 1.3.1 \u2014 see prefill note\n  use_low_precision_moe_combine: true  # recipe\
+    \ parity (GB200 decode)\nnvfp4_gemm_config:\n  allowed_backends:\n    - cutlass\n\
+    \    - cublaslt\n    - cuda_core\nenable_chunked_prefill: false\n# per-rank cap;\
     \ global 16/worker = headroom over conc32/5 workers\nmax_batch_size: 4\nmax_num_tokens:\
     \ 64\nmax_seq_len: 262144\ntrust_remote_code: true\nkv_cache_config:\n  free_gpu_memory_fraction:\
     \ 0.8\n  dtype: fp8\n  tokens_per_block: 32\n  enable_block_reuse: true\ncache_transceiver_config:\n\

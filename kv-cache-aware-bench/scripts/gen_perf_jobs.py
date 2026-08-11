@@ -12,10 +12,12 @@ RECIPE_PERF = (Path.home() /
                "kv-cache-aware-bench/recipes/recipes/kimi-k2.5/trtllm/agg-round-robin/perf.yaml")
 OUT = Path.home() / "kv-cache-aware-bench/manifests/perf"
 
-FULL_TRACE = "/model-cache/traces/weka_256k_aiperf.jsonl"
+FULL_TRACE = "/model-cache/traces/weka_256k_bench4k.jsonl"  # 4k-request interleaved slice: full trace costs ~4h of aiperf prompt synthesis per job
 
 # arm -> (dgd name, concurrencies)
 ARMS = {
+    "aggtp8-rr": ("kimi-k25-aggtp8-rr", "8,16,24,32,48"),
+    "aggtp8-kvt": ("kimi-k25-aggtp8-kvt", "8,16,24,32,48"),
     "agg1n-rr": ("kimi-k25-agg1n-rr", "32,48,64,96"),
     "agg1n-kvt": ("kimi-k25-agg1n-kvt", "32,48,64,96"),
     "arm1a-agg-eagle-rr": ("kimi-k25-agg-rr-eagle", "24"),
@@ -26,6 +28,14 @@ ARMS = {
     "arm2b-disagg-rr": ("kimi-k25-disagg-rr", "32,48,64,96,128,192,256"),
     "arm2c-disagg-kv-nvda": ("kimi-k25-disagg-kv-nvda", "32,48,64,96,128,192,256"),
     "arm2d-disagg-kv-tuned": ("kimi-k25-disagg-kv-tuned", "32,48,64,96,128,192,256"),
+    # 72-GPU disagg (18x TP4, full pool) — selected cells 6:12/384 + 12:6/192 ladder
+    "disagg72-rr": ("kimi-k25-disagg-rr", "96,192,288,384"),
+    "disagg72-kvt": ("kimi-k25-disagg-kv-tuned", "96,192,288,384"),
+    # sglang arms (selected points): disagg72 headline ladder; agg peak bracket
+    "sgl-disagg72-rr": ("sgl-disagg72-rr", "96,192,288,384"),
+    "sgl-disagg72-kv": ("sgl-disagg72-kv", "96,192,288,384"),
+    "sgl-agg-rr": ("sgl-agg-rr", "8,16,24,32"),
+    "sgl-agg-kv": ("sgl-agg-kv", "8,16,24,32"),
 }
 
 # smoke jobs: (suffix, base arm, trace file, concurrency, duration_s)
@@ -74,7 +84,7 @@ def make_job(job_name, dgd, trace, conc, duration):
                   "      annotations:\n        gke-gcsfuse/volumes: \"true\"\n"
                   "        gke-gcsfuse/memory-limit: 4Gi\n"
                   "        gke-gcsfuse/cpu-limit: \"2\"")
-    t = t.replace("activeDeadlineSeconds: 7200", "activeDeadlineSeconds: 18000")  # 3-conc sweep ~3.5h + warmup
+    t = t.replace("activeDeadlineSeconds: 7200", "activeDeadlineSeconds: 28800")  # 3-conc sweep ~3.5h + warmup
     t = t.replace("name: kimi-k25-agg-rr-bench", f"name: {job_name}")
     t = t.replace("app: kimi-k25-agg-rr-bench", f"app: {job_name}")
     t = t.replace("- kimi-k25-agg-rr", f"- {dgd}")  # antiaffinity DGD label value
@@ -92,11 +102,11 @@ def make_job(job_name, dgd, trace, conc, duration):
 OUT.mkdir(exist_ok=True)
 for arm, (dgd, conc) in ARMS.items():
     p = OUT / f"{arm}-bench.yaml"
-    p.write_text(make_job(f"{dgd}-bench", dgd, FULL_TRACE, conc, "1800"))
+    p.write_text(make_job(f"alisachen-{dgd}-bench", dgd, FULL_TRACE, conc, "1800"))
     print(f"wrote {p.name} (endpoint {dgd}-frontend:8000, conc {conc})")
 
 for suffix, arm, trace, conc, duration in SMOKES:
     dgd, _ = ARMS[arm]
     p = OUT / f"{suffix}.yaml"
-    p.write_text(make_job(f"{dgd}-{suffix}", dgd, trace, conc, duration))
+    p.write_text(make_job(f"alisachen-{dgd}-{suffix}", dgd, trace, conc, duration))
     print(f"wrote {p.name} (trace {trace}, conc {conc}, {duration}s)")

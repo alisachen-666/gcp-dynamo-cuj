@@ -1,2 +1,0 @@
-srt-slurm branch sa-submission-q2-2026 @ deb1dfd9934398664f92d194169c183e009da83b
-InferenceX @ cc40942de32a702ffcb332946d17d155a45ef0ca (configs/nvidia-master.yaml, key dsr1-fp8-gb300-dynamo-sglang, L3077)

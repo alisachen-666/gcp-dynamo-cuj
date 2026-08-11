@@ -15,16 +15,16 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kimi-k25-agg-rr-bench
+  name: alisachen-kimi-k25-agg-rr-bench
 spec:
   backoffLimit: 1
-  activeDeadlineSeconds: 18000  # 2h hard cap on the Job
+  activeDeadlineSeconds: 28800  # 2h hard cap on the Job
   completions: 1
   parallelism: 1
   template:
     metadata:
       labels:
-        app: kimi-k25-agg-rr-bench
+        app: alisachen-kimi-k25-agg-rr-bench
       annotations:
         gke-gcsfuse/volumes: "true"
         gke-gcsfuse/memory-limit: 4Gi
@@ -174,7 +174,7 @@ spec:
         - name: ENDPOINT
           value: kimi-k25-agg-rr-frontend:8000
         - name: TRACE_FILE
-          value: /model-cache/traces/weka_256k_aiperf.jsonl
+          value: /model-cache/traces/weka_256k_bench4k.jsonl
         - name: CONCURRENCIES
           value: "8"
         - name: BENCHMARK_DURATION

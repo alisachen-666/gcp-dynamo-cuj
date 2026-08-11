@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" font-family="system-ui,sans-serif">
+<rect width="760" height="440" fill="#fcfcfb"/>
+<text x="64" y="18" font-size="14" font-weight="600" fill="#0b0b0b">AIC SILICON pareto — aggregated vs disaggregated (GB300, warm prefix)</text>
+<text x="402.0" y="432" text-anchor="middle" font-size="12" fill="#52514e">tokens/s per user (decode rate)</text>
+<text x="16" y="208.0" text-anchor="middle" font-size="12" fill="#52514e" transform="rotate(-90 16 208.0)">output tokens/s per GPU</text>
+<line x1="64.0" y1="28" x2="64.0" y2="388" stroke="#e1e0d9"/>
+<text x="64.0" y="404" text-anchor="middle" font-size="11" fill="#898781">0</text>
+<line x1="205.2" y1="28" x2="205.2" y2="388" stroke="#e1e0d9"/>
+<text x="205.2" y="404" text-anchor="middle" font-size="11" fill="#898781">20</text>
+<line x1="346.4" y1="28" x2="346.4" y2="388" stroke="#e1e0d9"/>
+<text x="346.4" y="404" text-anchor="middle" font-size="11" fill="#898781">40</text>
+<line x1="487.6" y1="28" x2="487.6" y2="388" stroke="#e1e0d9"/>
+<text x="487.6" y="404" text-anchor="middle" font-size="11" fill="#898781">60</text>
+<line x1="628.9" y1="28" x2="628.9" y2="388" stroke="#e1e0d9"/>
+<text x="628.9" y="404" text-anchor="middle" font-size="11" fill="#898781">80</text>
+<line x1="64" y1="388.0" x2="740" y2="388.0" stroke="#e1e0d9"/>
+<text x="57" y="392.0" text-anchor="end" font-size="11" fill="#898781">0</text>
+<line x1="64" y1="367.5" x2="740" y2="367.5" stroke="#e1e0d9"/>
+<text x="57" y="371.5" text-anchor="end" font-size="11" fill="#898781">25</text>
+<line x1="64" y1="347.1" x2="740" y2="347.1" stroke="#e1e0d9"/>
+<text x="57" y="351.1" text-anchor="end" font-size="11" fill="#898781">50</text>
+<line x1="64" y1="326.6" x2="740" y2="326.6" stroke="#e1e0d9"/>
+<text x="57" y="330.6" text-anchor="end" font-size="11" fill="#898781">75</text>
+<path d="M198.7 87.1L202.8 90.3L219.1 112.4L225.1 114.9L228.0 127.8L229.6 131.2L236.7 133.4L240.3 147.2L241.9 152.4L250.5 154.2L250.5 162.1L256.4 167.5L260.0 172.7L270.9 174.2L274.0 193.3L276.5 202.3L289.9 203.4L291.6 214.7L301.7 219.1L308.9 228.9L314.4 229.7L325.7 247.0L344.7 267.7L365.4 289.0L390.2 314.7L438.7 346.2L449.7 355.2L495.2 363.3L502.1 369.3L582.2 373.2L617.9 380.1" fill="none" stroke="#eb6834" stroke-width="2.2"/>
+<circle cx="198.7" cy="87.1" r="3.4" fill="#eb6834"/>
+<circle cx="202.8" cy="90.3" r="3.4" fill="#eb6834"/>
+<circle cx="219.1" cy="112.4" r="3.4" fill="#eb6834"/>
+<circle cx="225.1" cy="114.9" r="3.4" fill="#eb6834"/>
+<circle cx="228.0" cy="127.8" r="3.4" fill="#eb6834"/>
+<circle cx="229.6" cy="131.2" r="3.4" fill="#eb6834"/>
+<circle cx="236.7" cy="133.4" r="3.4" fill="#eb6834"/>
+<circle cx="240.3" cy="147.2" r="3.4" fill="#eb6834"/>
+<circle cx="241.9" cy="152.4" r="3.4" fill="#eb6834"/>
+<circle cx="250.5" cy="154.2" r="3.4" fill="#eb6834"/>
+<circle cx="250.5" cy="162.1" r="3.4" fill="#eb6834"/>
+<circle cx="256.4" cy="167.5" r="3.4" fill="#eb6834"/>
+<circle cx="260.0" cy="172.7" r="3.4" fill="#eb6834"/>
+<circle cx="270.9" cy="174.2" r="3.4" fill="#eb6834"/>
+<circle cx="274.0" cy="193.3" r="3.4" fill="#eb6834"/>
+<circle cx="276.5" cy="202.3" r="3.4" fill="#eb6834"/>
+<circle cx="289.9" cy="203.4" r="3.4" fill="#eb6834"/>
+<circle cx="291.6" cy="214.7" r="3.4" fill="#eb6834"/>
+<circle cx="301.7" cy="219.1" r="3.4" fill="#eb6834"/>
+<circle cx="308.9" cy="228.9" r="3.4" fill="#eb6834"/>
+<circle cx="314.4" cy="229.7" r="3.4" fill="#eb6834"/>
+<circle cx="325.7" cy="247.0" r="3.4" fill="#eb6834"/>
+<circle cx="344.7" cy="267.7" r="3.4" fill="#eb6834"/>
+<circle cx="365.4" cy="289.0" r="3.4" fill="#eb6834"/>
+<circle cx="390.2" cy="314.7" r="3.4" fill="#eb6834"/>
+<circle cx="438.7" cy="346.2" r="3.4" fill="#eb6834"/>
+<circle cx="449.7" cy="355.2" r="3.4" fill="#eb6834"/>
+<circle cx="495.2" cy="363.3" r="3.4" fill="#eb6834"/>
+<circle cx="502.1" cy="369.3" r="3.4" fill="#eb6834"/>
+<circle cx="582.2" cy="373.2" r="3.4" fill="#eb6834"/>
+<circle cx="617.9" cy="380.1" r="3.4" fill="#eb6834"/>
+<path d="M176.9 66.6L185.4 76.8L195.1 89.4L205.5 105.9L208.2 121.2L226.8 133.0L246.8 153.9L248.9 177.5L267.6 185.1L269.3 212.3L300.3 236.6L302.5 239.4L304.8 259.4L316.0 262.4L357.0 283.7L366.0 307.4L418.3 337.6L464.9 352.3L469.6 359.1L491.3 359.5L549.2 366.4L552.7 374.9L643.0 375.1L689.9 382.4" fill="none" stroke="#1baf7a" stroke-width="2.2"/>
+<circle cx="176.9" cy="66.6" r="3.4" fill="#1baf7a"/>
+<circle cx="185.4" cy="76.8" r="3.4" fill="#1baf7a"/>
+<circle cx="195.1" cy="89.4" r="3.4" fill="#1baf7a"/>
+<circle cx="205.5" cy="105.9" r="3.4" fill="#1baf7a"/>
+<circle cx="208.2" cy="121.2" r="3.4" fill="#1baf7a"/>
+<circle cx="226.8" cy="133.0" r="3.4" fill="#1baf7a"/>
+<circle cx="246.8" cy="153.9" r="3.4" fill="#1baf7a"/>
+<circle cx="248.9" cy="177.5" r="3.4" fill="#1baf7a"/>
+<circle cx="267.6" cy="185.1" r="3.4" fill="#1baf7a"/>
+<circle cx="269.3" cy="212.3" r="3.4" fill="#1baf7a"/>
+<circle cx="300.3" cy="236.6" r="3.4" fill="#1baf7a"/>
+<circle cx="302.5" cy="239.4" r="3.4" fill="#1baf7a"/>
+<circle cx="304.8" cy="259.4" r="3.4" fill="#1baf7a"/>
+<circle cx="316.0" cy="262.4" r="3.4" fill="#1baf7a"/>
+<circle cx="357.0" cy="283.7" r="3.4" fill="#1baf7a"/>
+<circle cx="366.0" cy="307.4" r="3.4" fill="#1baf7a"/>
+<circle cx="418.3" cy="337.6" r="3.4" fill="#1baf7a"/>
+<circle cx="464.9" cy="352.3" r="3.4" fill="#1baf7a"/>
+<circle cx="469.6" cy="359.1" r="3.4" fill="#1baf7a"/>
+<circle cx="491.3" cy="359.5" r="3.4" fill="#1baf7a"/>
+<circle cx="549.2" cy="366.4" r="3.4" fill="#1baf7a"/>
+<circle cx="552.7" cy="374.9" r="3.4" fill="#1baf7a"/>
+<circle cx="643.0" cy="375.1" r="3.4" fill="#1baf7a"/>
+<circle cx="689.9" cy="382.4" r="3.4" fill="#1baf7a"/>
+<rect x="530" y="30" width="10" height="10" rx="2" fill="#eb6834"/>
+<text x="545" y="39" font-size="11.5" fill="#52514e">AIC aggregated</text>
+<rect x="530" y="48" width="10" height="10" rx="2" fill="#1baf7a"/>
+<text x="545" y="57" font-size="11.5" fill="#52514e">AIC disaggregated</text>
+</svg>

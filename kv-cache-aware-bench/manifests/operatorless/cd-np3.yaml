@@ -1,0 +1,7 @@
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata: {name: kv-bench-cd-np3, namespace: dynamo-cloud}
+spec:
+  numNodes: 0
+  channel:
+    resourceClaimTemplate: {name: kv-bench-cd-np3-channel}
