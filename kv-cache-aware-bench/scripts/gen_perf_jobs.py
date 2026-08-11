@@ -55,6 +55,11 @@ def make_job(job_name, dgd, trace, conc, duration):
     # ladder's first concurrency first (artifacts discarded) so every measured
     # point sees steady-state caches, matching the sim's steady-state window.
     first_conc = conc.split(",")[0]
+    # neutralize the recipe's synthetic warmup: with ignore_eos and no output cap
+    # its 5 requests generate unbounded (measured 33 min/request). The trace
+    # cache-warmup below is the real warmup.
+    t = t.replace("# Warmup", "# Warmup (synthetic phase disabled; see cache warmup)\n          if false; then")
+    t = t.replace('echo "Warmup complete"', 'fi\n          echo "Warmup complete"', 1)
     t = t.replace(
         'echo "Warmup complete"',
         'echo "Warmup complete"\n\n'
@@ -98,7 +103,9 @@ def make_job(job_name, dgd, trace, conc, duration):
         "/model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true\n"
         "          printf local > $CACHE/refs/main\n"
         "          cp -r /model-cache/hf-cache/hub/datasets--semianalysisai--cc-traces-weka-062126-256k /tmp/hf/hub/ 2>/dev/null "
-        "&& echo 'weka dataset staged from PVC' || echo 'WARN: weka dataset not in PVC cache'\n"
+        "&& echo 'weka hub snapshot staged' || echo 'WARN: hub snapshot missing'\n"
+        "          mkdir -p /tmp/hf/datasets && cp -r /model-cache/hf-cache/datasets/* /tmp/hf/datasets/ 2>/dev/null "
+        "&& echo 'weka processed cache staged' || echo 'WARN: processed cache missing'\n"
         "          export HF_HUB_OFFLINE=1\n"
         "          ls $CACHE/snapshots/local/ | head -20\n",
         1)

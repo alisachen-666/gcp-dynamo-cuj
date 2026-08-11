@@ -92,7 +92,8 @@ spec:
           mkdir -p $CACHE/snapshots/local $CACHE/refs
           cp /model-cache/alisachen/Kimi-K2.5-NVFP4/*.json /model-cache/alisachen/Kimi-K2.5-NVFP4/*.py /model-cache/alisachen/Kimi-K2.5-NVFP4/*.jinja /model-cache/alisachen/Kimi-K2.5-NVFP4/*.model $CACHE/snapshots/local/ 2>/dev/null || true
           printf local > $CACHE/refs/main
-          cp -r /model-cache/hf-cache/hub/datasets--semianalysisai--cc-traces-weka-062126-256k /tmp/hf/hub/ 2>/dev/null && echo 'weka dataset staged from PVC' || echo 'WARN: weka dataset not in PVC cache'
+          cp -r /model-cache/hf-cache/hub/datasets--semianalysisai--cc-traces-weka-062126-256k /tmp/hf/hub/ 2>/dev/null && echo 'weka hub snapshot staged' || echo 'WARN: hub snapshot missing'
+          mkdir -p /tmp/hf/datasets && cp -r /model-cache/hf-cache/datasets/* /tmp/hf/datasets/ 2>/dev/null && echo 'weka processed cache staged' || echo 'WARN: processed cache missing'
           export HF_HUB_OFFLINE=1
           ls $CACHE/snapshots/local/ | head -20
 
@@ -111,7 +112,8 @@ spec:
           echo "Artifact root:   ${ROOT_DIR}"
           echo "=============================================="
 
-          # Warmup
+          # Warmup (synthetic phase disabled; see cache warmup)
+          if false; then
           WARMUP_DIR="${ROOT_DIR}/warmup"
           mkdir -p "$WARMUP_DIR"
           aiperf profile \
@@ -125,6 +127,7 @@ spec:
             --concurrency 1 \
             --request-count 5 \
             --artifact-dir "${WARMUP_DIR}"
+          fi
           echo "Warmup complete"
 
           CWARM_DIR="${ROOT_DIR}/cache-warmup"
