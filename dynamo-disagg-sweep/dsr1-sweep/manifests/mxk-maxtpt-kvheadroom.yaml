@@ -1,0 +1,402 @@
+# MXK: DIAGNOSTIC (non-record) — max_tpt with decode KV headroom +50%.
+# Single change vs mx-maxtpt.yaml: decode --max-total-tokens 524288 -> 786432, so the full
+# conc-2048 cohort (64 req/rank x ~9216 ctx = 590k) fits in KV including bootstrap prealloc.
+# DELIBERATE RECIPE DEVIATION - never use for parity tables.
+# Pre-registered prediction (2026-08-01): if the prealloc feedback loop is the binding
+# constraint, running/rank rises from ~30 toward 50+, prefill starvation gaps shrink, TTFT
+# median drops several seconds, throughput moves toward >=1750/decode-GPU. If numbers do NOT
+# move, KV is exonerated and the bunching is upstream (router/admission).
+# MX: 8k1k MAX_TPT — srt-slurm recipes/gb300-fp4/8k1k/max_tpt.yaml @ sa-submission-q2-2026
+# (vendored: reference/srt-slurm-gb300-fp4-8k1k-max_tpt.yaml). Verified: recipe == mid_curve
+# except prefill_workers 10 (vs 6), decode 8 nodes DEP32 (vs 12 DEP48), conc 2048 only.
+# 10 prefill (1 node TP4 each) + 1 decode worker (8 nodes, TP=DP=EP=32, DeepEP low_latency)
+# + 10 frontends = 18 nodes / 72 GPUs (40 prefill / 32 decode).
+# Request plane: NATS (srtctl schema default; branch recipe omits the key). InferenceX ref:
+# 1781.6 out tok/s/decode-GPU, TPOT 17.12ms at conc 2048.
+# M4: FULL 8k1k mid_curve — srt-slurm recipes/gb300-fp4/8k1k/mid_curve.yaml on GKE.
+# 6 prefill workers (1 node TP=4 each) + 1 decode worker (12 nodes, TP=EP=DP=48, DeepEP)
+# + 10 frontends. 72 GPUs. Image: exact InferenceX pin + dynamo 0.8.1 wheels.
+# Deviation from srt-slurm noted: k8s Service load-balances frontends (they use nginx:1.27.4).
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: dsr1-mxk-cd
+  namespace: dynamo-cloud
+spec:
+  numNodes: 18
+  channel:
+    resourceClaimTemplate:
+      name: dsr1-mxk-cd-channel
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsr1-mxk-frontend
+  namespace: dynamo-cloud
+spec:
+  selector:
+    app: dsr1-mxk-frontend
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsr1-mxk-decode
+  namespace: dynamo-cloud
+spec:
+  clusterIP: None
+  selector:
+    app: dsr1-mxk-decode
+  ports:
+  - port: 5757
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsr1-mxk-frontend
+  namespace: dynamo-cloud
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: dsr1-mxk-frontend
+  template:
+    metadata:
+      labels:
+        app: dsr1-mxk-frontend
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      containers:
+      - name: frontend
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          # mirror small files to /model — MUST equal the workers' registered model path
+          until python3 -c "
+          from huggingface_hub import snapshot_download
+          import shutil, glob, os
+          p = snapshot_download('nvidia/DeepSeek-R1-0528-NVFP4-v2', allow_patterns=['*.json','*.py','tokenizer*','*.txt'])
+          os.makedirs('/model', exist_ok=True)
+          [shutil.copy(f, '/model/') for f in glob.glob(p + '/*') if os.path.isfile(f)]
+          "; do echo "small-file mirror failed, retry in 60s"; sleep 60; done
+          exec python3 -m dynamo.frontend --http-port=8000
+        env:
+        - name: DYN_REQUEST_PLANE
+          value: "nats"
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        - name: HF_HOME
+          value: /tmp/hf
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "8"
+            memory: 16Gi
+        volumeMounts:
+        - {name: model, mountPath: /model}
+      volumes:
+      - name: model
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsr1-mxk-prefill
+  namespace: dynamo-cloud
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: dsr1-mxk-prefill
+  template:
+    metadata:
+      labels:
+        app: dsr1-mxk-prefill
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: compute-domain-channel
+        resourceClaimTemplateName: dsr1-mxk-cd-channel
+      containers:
+      - name: prefill
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          [ -f /model/model.safetensors.index.json ] || { echo "MODEL NOT SEEDED on this node"; exit 1; }
+          exec python3 -m dynamo.sglang \
+            --model-path /model \
+            --served-model-name deepseek-ai/DeepSeek-R1 \
+            --disaggregation-mode prefill \
+            --trust-remote-code \
+            --kv-cache-dtype fp8_e4m3 \
+            --attention-backend trtllm_mla \
+            --quantization modelopt_fp4 \
+            --moe-runner-backend flashinfer_trtllm \
+            --disable-radix-cache \
+            --disable-chunked-prefix-cache \
+            --stream-interval 50 \
+            --decode-log-interval 1000 \
+            --watchdog-timeout 1000000 \
+            --context-length 9600 \
+            --disable-shared-experts-fusion \
+            --disaggregation-bootstrap-port 30001 \
+            --mem-fraction-static 0.95 \
+            --max-total-tokens 131072 \
+            --max-prefill-tokens 524288 \
+            --chunked-prefill-size 131072 \
+            --max-running-requests 30000 \
+            --load-balance-method round_robin \
+            --disable-cuda-graph \
+            --fp4-gemm-backend flashinfer_cutlass \
+            --disaggregation-transfer-backend nixl \
+            --request-plane nats \
+            --tensor-parallel-size 4 \
+            --data-parallel-size 1 \
+            --expert-parallel-size 1 \
+            --host 0.0.0.0
+        env:
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        # srt-slurm mid_curve prefill_environment (verbatim)
+        - name: TORCH_DISTRIBUTED_DEFAULT_TIMEOUT
+          value: "1800"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: DYN_SKIP_SGLANG_LOG_FORMATTING
+          value: "1"
+        - name: SGLANG_NVFP4_CKPT_FP8_GEMM_IN_ATTN
+          value: "1"
+        - name: SGLANG_PER_TOKEN_GROUP_QUANT_8BIT_V2
+          value: "1"
+        - name: SGLANG_DISAGGREGATION_HEARTBEAT_MAX_FAILURE
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT
+          value: "100000"
+        - name: MC_TE_METRIC
+          value: "true"
+        - name: MC_FORCE_MNNVL
+          value: "1"
+        - name: NCCL_MNNVL_ENABLE
+          value: "1"
+        - name: NCCL_CUMEM_ENABLE
+          value: "1"
+        - name: SGLANG_MOONCAKE_CUSTOM_MEM_POOL
+          value: "True"
+        - name: SGLANG_USE_MESSAGE_QUEUE_BROADCASTER
+          value: "0"
+        - name: SGLANG_DISABLE_TP_MEMORY_INBALANCE_CHECK
+          value: "1"
+        # GKE canonical transport block (tested in M2)
+        - name: UCX_TLS
+          value: "cuda_copy,cuda_ipc,tcp"
+        - name: UCX_CUDA_IPC_ENABLE_MNNVL
+          value: "y"
+        - name: UCX_MEMTYPE_CACHE
+          value: "n"
+        - name: UCX_MEMTYPE_REG_WHOLE
+          value: "n"
+        - name: UCX_PROTO_INFO
+          value: "y"
+        - name: GLOO_SOCKET_IFNAME
+          value: "eth0"
+        - name: TP_SOCKET_IFNAME
+          value: "eth0"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "64"
+            memory: 512Gi
+          limits:
+            nvidia.com/gpu: "4"
+          claims:
+          - name: compute-domain-channel
+        volumeMounts:
+        - {name: dshm, mountPath: /dev/shm}
+        - {name: model, mountPath: /model, readOnly: true}
+      volumes:
+      - name: dshm
+        emptyDir: {medium: Memory, sizeLimit: 128Gi}
+      - name: model
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsr1-model, type: Directory}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dsr1-mxk-decode
+  namespace: dynamo-cloud
+spec:
+  serviceName: dsr1-mxk-decode
+  replicas: 8
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: dsr1-mxk-decode
+  template:
+    metadata:
+      labels:
+        app: dsr1-mxk-decode
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: compute-domain-channel
+        resourceClaimTemplateName: dsr1-mxk-cd-channel
+      containers:
+      - name: decode
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          [ -f /model/model.safetensors.index.json ] || { echo "MODEL NOT SEEDED on this node"; exit 1; }
+          RANK=${POD_INDEX}
+          echo "decode node-rank=$RANK"
+          exec python3 -m dynamo.sglang \
+            --model-path /model \
+            --served-model-name deepseek-ai/DeepSeek-R1 \
+            --disaggregation-mode decode \
+            --trust-remote-code \
+            --kv-cache-dtype fp8_e4m3 \
+            --attention-backend trtllm_mla \
+            --quantization modelopt_fp4 \
+            --moe-runner-backend flashinfer_cutedsl \
+            --disable-radix-cache \
+            --disable-chunked-prefix-cache \
+            --stream-interval 50 \
+            --decode-log-interval 1000 \
+            --watchdog-timeout 1000000 \
+            --context-length 9600 \
+            --disable-shared-experts-fusion \
+            --eplb-algorithm deepseek \
+            --disaggregation-bootstrap-port 30001 \
+            --mem-fraction-static 0.83 \
+            --max-total-tokens 786432 \
+            --chunked-prefill-size 24576 \
+            --max-running-requests 16384 \
+            --moe-a2a-backend deepep \
+            --deepep-mode low_latency \
+            --ep-dispatch-algorithm static \
+            --ep-num-redundant-experts 32 \
+            --cuda-graph-max-bs 512 \
+            --num-reserved-decode-tokens 112 \
+            --moe-dense-tp-size 1 \
+            --enable-dp-lm-head \
+            --prefill-round-robin-balance \
+            --enable-dp-attention \
+            --fp4-gemm-backend flashinfer_cutlass \
+            --disaggregation-transfer-backend nixl \
+            --request-plane nats \
+            --tensor-parallel-size 32 \
+            --data-parallel-size 32 \
+            --expert-parallel-size 32 \
+            --dist-init-addr dsr1-mxk-decode-0.dsr1-mxk-decode.dynamo-cloud.svc.cluster.local:5757 \
+            --nnodes 8 \
+            --node-rank $RANK \
+            --host 0.0.0.0
+        env:
+        - name: POD_INDEX
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['apps.kubernetes.io/pod-index']
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        # srt-slurm mid_curve decode_environment (verbatim)
+        - name: TORCH_DISTRIBUTED_DEFAULT_TIMEOUT
+          value: "1800"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: DYN_SKIP_SGLANG_LOG_FORMATTING
+          value: "1"
+        - name: SGLANG_NVFP4_CKPT_FP8_GEMM_IN_ATTN
+          value: "1"
+        - name: SGLANG_PER_TOKEN_GROUP_QUANT_8BIT_V2
+          value: "1"
+        - name: SGLANG_DISAGGREGATION_HEARTBEAT_MAX_FAILURE
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT
+          value: "100000"
+        - name: MC_TE_METRIC
+          value: "true"
+        - name: MC_FORCE_MNNVL
+          value: "1"
+        - name: NCCL_MNNVL_ENABLE
+          value: "1"
+        - name: NCCL_CUMEM_ENABLE
+          value: "1"
+        - name: SGLANG_MOONCAKE_CUSTOM_MEM_POOL
+          value: "True"
+        - name: SGLANG_USE_MESSAGE_QUEUE_BROADCASTER
+          value: "0"
+        - name: SGLANG_DISABLE_TP_MEMORY_INBALANCE_CHECK
+          value: "1"
+        - name: SGLANG_DEEPEP_NUM_MAX_DISPATCH_TOKENS_PER_RANK
+          value: "512"
+        - name: SGLANG_MOE_NVFP4_DISPATCH
+          value: "1"
+        # GKE canonical transport block (tested in M2) + DeepEP evidence
+        - name: UCX_TLS
+          value: "cuda_copy,cuda_ipc,tcp"
+        - name: UCX_CUDA_IPC_ENABLE_MNNVL
+          value: "y"
+        - name: UCX_MEMTYPE_CACHE
+          value: "n"
+        - name: UCX_MEMTYPE_REG_WHOLE
+          value: "n"
+        - name: UCX_PROTO_INFO
+          value: "y"
+        - name: NVSHMEM_DEBUG
+          value: "INFO"
+        - name: GLOO_SOCKET_IFNAME
+          value: "eth0"
+        - name: TP_SOCKET_IFNAME
+          value: "eth0"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "64"
+            memory: 512Gi
+          limits:
+            nvidia.com/gpu: "4"
+          claims:
+          - name: compute-domain-channel
+        volumeMounts:
+        - {name: dshm, mountPath: /dev/shm}
+        - {name: model, mountPath: /model, readOnly: true}
+      volumes:
+      - name: dshm
+        emptyDir: {medium: Memory, sizeLimit: 128Gi}
+      - name: model
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsr1-model, type: Directory}

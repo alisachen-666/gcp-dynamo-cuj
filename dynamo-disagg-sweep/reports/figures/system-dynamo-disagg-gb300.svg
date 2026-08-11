@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<defs><marker id="ah-2a78d6" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#2a78d6"/></marker><marker id="ah-eb6834" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#eb6834"/></marker><marker id="ah-898781" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#898781"/></marker></defs>
+<rect width="900" height="420" fill="#fcfcfb" rx="8"/>
+<text x="24" y="26" font-size="14" fill="#52514e" font-weight="600">Dynamo disaggregated serving on GB300 NVL72 — e2e system (GKE A4X Max)</text>
+<rect x="24" y="60" width="150" height="58" fill="#ffffff" stroke="#898781" stroke-width="1.2" rx="6"/>
+<text x="99.0" y="77" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Bench client</text>
+<text x="99.0" y="91" font-size="9.5" fill="#898781" text-anchor="middle">sa-bench Job</text>
+<text x="99.0" y="104" font-size="9.5" fill="#898781" text-anchor="middle">2×warmup + 10× measured</text>
+<rect x="24" y="172" width="150" height="58" fill="#ffffff" stroke="#898781" stroke-width="1.2" rx="6"/>
+<text x="99.0" y="189" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Frontend</text>
+<text x="99.0" y="203" font-size="9.5" fill="#898781" text-anchor="middle">Dynamo ingress pods</text>
+<text x="99.0" y="216" font-size="9.5" fill="#898781" text-anchor="middle">K8s Service :8000</text>
+<rect x="24" y="304" width="150" height="58" fill="#ffffff" stroke="#898781" stroke-width="1.2" rx="6"/>
+<text x="99.0" y="321" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Control plane</text>
+<text x="99.0" y="335" font-size="9.5" fill="#898781" text-anchor="middle">etcd — worker registry</text>
+<text x="99.0" y="348" font-size="9.5" fill="#898781" text-anchor="middle">NATS — request plane</text>
+<line x1="99" y1="118" x2="99" y2="170" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="106" y="148" font-size="9.5" fill="#52514e">HTTP /v1/completions</text>
+<line x1="99" y1="230" x2="99" y2="302" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="106" y="270" font-size="9.5" fill="#52514e">register / route</text>
+<rect x="220" y="52" width="656" height="330" fill="none" stroke="#e1e0d9" stroke-width="1.6" rx="10"/>
+<text x="234" y="72" font-size="11" fill="#898781" font-weight="600">NVL72 scale-up domain — 18× GB300 nodes (4 GPU/node)</text>
+<rect x="240" y="92" width="212" height="112" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="346.0" y="109" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Prefill workers</text>
+<text x="346.0" y="123" font-size="9.5" fill="#898781" text-anchor="middle">sglang disagg mode=prefill</text>
+<text x="346.0" y="136" font-size="9.5" fill="#898781" text-anchor="middle">DEP4 groups per recipe</text>
+<text x="346.0" y="149" font-size="9.5" fill="#898781" text-anchor="middle">8k-token prompt prefill</text>
+<text x="346.0" y="162" font-size="9.5" fill="#898781" text-anchor="middle">NVFP4 + DeepGEMM JIT</text>
+<rect x="646" y="92" width="212" height="112" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="752.0" y="109" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Decode workers</text>
+<text x="752.0" y="123" font-size="9.5" fill="#898781" text-anchor="middle">sglang disagg mode=decode</text>
+<text x="752.0" y="136" font-size="9.5" fill="#898781" text-anchor="middle">DEP48 / DEP32 wide-EP</text>
+<text x="752.0" y="149" font-size="9.5" fill="#898781" text-anchor="middle">DeepEP all-to-all (NVLink)</text>
+<text x="752.0" y="162" font-size="9.5" fill="#898781" text-anchor="middle">token generation</text>
+<text x="549.0" y="116" font-size="9.5" fill="#eb6834" text-anchor="middle" font-weight="600">KV path A — MNNVL (NVLink)</text>
+<text x="549.0" y="128" font-size="9.5" fill="#eb6834" text-anchor="middle">cuda_ipc / mooncake</text>
+<line x1="458" y1="138" x2="640" y2="138" stroke="#eb6834" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#ah-eb6834)"/>
+<text x="549.0" y="166" font-size="9.5" fill="#2a78d6" text-anchor="middle" font-weight="600">KV path B — GPUDirect RDMA</text>
+<text x="549.0" y="178" font-size="9.5" fill="#2a78d6" text-anchor="middle">rc_mlx5, NIC-offloaded</text>
+<line x1="458" y1="188" x2="640" y2="188" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>
+<rect x="240" y="236" width="618" height="54" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="549.0" y="253" font-size="10" fill="#52514e" text-anchor="middle">8× CX-7 mrdma NICs per node (DraNet DRA claims) — 8-rail RoCE fabric, disjoint /64 per rail</text>
+<text x="549.0" y="267" font-size="9.5" fill="#898781" text-anchor="middle">UCX: NET_DEVICES=mlx5_0..7 (ordered) · GID_INDEX=5 · rail-aware same-subnet pairing · TLS=cuda_copy,rc_x,tcp</text>
+<line x1="346" y1="206" x2="346" y2="234" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>
+<line x1="752" y1="206" x2="752" y2="234" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>
+<rect x="240" y="312" width="618" height="52" fill="#ffffff" stroke="#898781" stroke-width="1.2" rx="6"/>
+<text x="549.0" y="329" font-size="10" fill="#52514e" text-anchor="middle">GKE platform layer</text>
+<text x="549.0" y="343" font-size="9.5" fill="#898781" text-anchor="middle">DRA ComputeDomain → IMEX channels (MNNVL) · hostPath DeepGEMM JIT cache · a4x-max metal node pool</text>
+<line x1="176" y1="201" x2="238" y2="150" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="234" y="168" font-size="9.5" fill="#52514e" text-anchor="end">dispatch (NATS)</text>
+<line x1="646" y1="84" x2="176" y2="84" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="430" y="80" font-size="9.5" fill="#52514e" text-anchor="middle">streamed tokens back to client</text>
+</svg>

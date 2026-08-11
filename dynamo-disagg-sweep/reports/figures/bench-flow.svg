@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<defs><marker id="ah-2a78d6" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#2a78d6"/></marker><marker id="ah-eb6834" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#eb6834"/></marker><marker id="ah-898781" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0, 9 3.5, 0 7" fill="#898781"/></marker></defs>
+<rect width="900" height="470" fill="#fcfcfb" rx="8"/>
+<text x="24" y="26" font-size="14" fill="#52514e" font-weight="600">E2E benchmarking flow — one data point, deploy to report (record-quality pipeline)</text>
+<rect x="24" y="64" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="102.0" y="84" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">1 · Vendor + diff recipe</text>
+<text x="102.0" y="98" font-size="9" fill="#898781" text-anchor="middle">per-point flags from srt-slurm</text>
+<text x="102.0" y="110" font-size="9" fill="#898781" text-anchor="middle">recipes, diffed flag-by-flag</text>
+<rect x="204" y="64" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="282.0" y="84" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">2 · Deploy point</text>
+<text x="282.0" y="98" font-size="9" fill="#898781" text-anchor="middle">ComputeDomain + workers</text>
+<text x="282.0" y="110" font-size="9" fill="#898781" text-anchor="middle">+ frontend (kubectl apply)</text>
+<line x1="180" y1="97.0" x2="200" y2="97.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<rect x="384" y="64" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="462.0" y="84" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">3 · Registration wait</text>
+<text x="462.0" y="98" font-size="9" fill="#898781" text-anchor="middle">etcd shows all expected</text>
+<text x="462.0" y="110" font-size="9" fill="#898781" text-anchor="middle">workers (poll, crash-abort)</text>
+<line x1="360" y1="97.0" x2="380" y2="97.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<rect x="564" y="64" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="642.0" y="84" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">4 · Serving gate</text>
+<text x="642.0" y="98" font-size="9" fill="#898781" text-anchor="middle">3 consecutive real</text>
+<text x="642.0" y="110" font-size="9" fill="#898781" text-anchor="middle">completions via Service</text>
+<line x1="540" y1="97.0" x2="560" y2="97.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<rect x="744" y="64" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="822.0" y="84" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">5 · Transport gate (RDMA)</text>
+<text x="822.0" y="98" font-size="9" fill="#898781" text-anchor="middle">KV probe must be rc_mlx5;</text>
+<text x="822.0" y="110" font-size="9" fill="#898781" text-anchor="middle">+ in-bench watchdog</text>
+<line x1="720" y1="97.0" x2="740" y2="97.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="822.0" y="146" font-size="9" fill="#eb6834" text-anchor="middle" font-weight="600">TCP fallback → kill run, never recorded</text>
+<rect x="24" y="220" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="102.0" y="240" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">9 · Upload + teardown</text>
+<text x="102.0" y="254" font-size="9" fill="#898781" text-anchor="middle">server/bench logs, configs,</text>
+<text x="102.0" y="266" font-size="9" fill="#898781" text-anchor="middle">results → GCS; delete point</text>
+<rect x="204" y="220" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="282.0" y="240" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">8 · Extract before teardown</text>
+<text x="282.0" y="254" font-size="9" fill="#898781" text-anchor="middle">results parsed from job log</text>
+<text x="282.0" y="266" font-size="9" fill="#898781" text-anchor="middle">(rotation-proof SLIM tail)</text>
+<rect x="384" y="220" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="462.0" y="240" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">7 · JIT/stall assertion</text>
+<text x="462.0" y="254" font-size="9" fill="#898781" text-anchor="middle">every measured window vs</text>
+<text x="462.0" y="266" font-size="9" fill="#898781" text-anchor="middle">prefill logs → VALID/SUSPECT</text>
+<rect x="564" y="220" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="642.0" y="240" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">6b · Record pass</text>
+<text x="642.0" y="254" font-size="9" fill="#898781" text-anchor="middle">2×conc warmup discarded</text>
+<text x="642.0" y="266" font-size="9" fill="#898781" text-anchor="middle">+ 10×conc measured @ 8k1k</text>
+<rect x="744" y="220" width="156" height="66" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="822.0" y="240" font-size="10.5" fill="#52514e" text-anchor="middle" font-weight="600">6a · Cache-filler pass</text>
+<text x="822.0" y="254" font-size="9" fill="#898781" text-anchor="middle">full bench, results discarded</text>
+<text x="822.0" y="266" font-size="9" fill="#898781" text-anchor="middle">forces every JIT shape</text>
+<line x1="744" y1="253.0" x2="724" y2="253.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<line x1="564" y1="253.0" x2="544" y2="253.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<line x1="384" y1="253.0" x2="364" y2="253.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<line x1="204" y1="253.0" x2="184" y2="253.0" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<line x1="822.0" y1="130" x2="822.0" y2="216" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+<text x="462.0" y="302" font-size="9" fill="#eb6834" text-anchor="middle" font-weight="600">SUSPECT → cheap re-record against the standing deployment</text>
+<rect x="24" y="366" width="876" height="58" fill="#ffffff" stroke="#898781" stroke-width="1.2" rx="6"/>
+<text x="462.0" y="388" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">10 · Reports regenerate from slims — comparison tables, RDMA report, Pareto figures, e2e analysis</text>
+<text x="462.0" y="406" font-size="9.5" fill="#898781" text-anchor="middle">optimal-final policy: best audited variant per point (TCP/NATS × MNNVL/RDMA) becomes the summary row; all others kept as extras — every cell links logs + bench + config</text>
+<line x1="102.0" y1="286" x2="102.0" y2="362" stroke="#898781" stroke-width="1.8" marker-end="url(#ah-898781)"/>
+</svg>

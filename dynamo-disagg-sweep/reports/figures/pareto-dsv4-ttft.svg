@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="760" height="420" fill="#fcfcfb" rx="8"/>
+<text x="56" y="20" font-size="12.5" fill="#52514e" font-weight="600">DeepSeek-V4-Pro FP4 — total throughput per GPU (tok/s)</text>
+<line x1="568" x2="586" y1="14" y2="14" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="577" cy="14" r="3.2" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="590" y="18" font-size="10.5" fill="#52514e">Ours: GKE (finals)</text>
+<line x1="568" x2="586" y1="29" y2="29" stroke="#eb6834" stroke-width="2"/>
+<circle cx="577" cy="29" r="3.2" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<text x="590" y="33" font-size="10.5" fill="#52514e">InferenceMax (published)</text>
+<line x1="56" x2="736" y1="384.0" y2="384.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="387.5" font-size="10.5" fill="#898781" text-anchor="end">0</text>
+<line x1="56" x2="736" y1="259.9" y2="259.9" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="263.4" font-size="10.5" fill="#898781" text-anchor="end">5k</text>
+<line x1="56" x2="736" y1="135.9" y2="135.9" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="139.4" font-size="10.5" fill="#898781" text-anchor="end">10k</text>
+<line x1="183.7" x2="183.7" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="183.7" y="400" font-size="10.5" fill="#898781" text-anchor="middle">1</text>
+<line x1="307.2" x2="307.2" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="307.2" y="400" font-size="10.5" fill="#898781" text-anchor="middle">3</text>
+<line x1="442.5" x2="442.5" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="442.5" y="400" font-size="10.5" fill="#898781" text-anchor="middle">10</text>
+<line x1="565.9" x2="565.9" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="565.9" y="400" font-size="10.5" fill="#898781" text-anchor="middle">30</text>
+<line x1="701.2" x2="701.2" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="701.2" y="400" font-size="10.5" fill="#898781" text-anchor="middle">100</text>
+<line x1="56" x2="736" y1="384" y2="384" stroke="#898781" stroke-width="1"/>
+<text x="396.0" y="414" font-size="11" fill="#52514e" text-anchor="middle">Median time-to-first-token (s, log scale)</text>
+<polyline points="186.4,379.2 211.0,375.9 295.0,360.3 326.2,344.3 502.1,142.2 518.3,203.0 530.9,253.7 543.5,308.2 648.4,95.3 698.2,80.4" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="186.4" cy="379.2" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="211.0" cy="375.9" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="295.0" cy="360.3" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="326.2" cy="344.3" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="502.1" cy="142.2" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="518.3" cy="203.0" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="530.9" cy="253.7" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="543.5" cy="308.2" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="648.4" cy="95.3" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="698.2" cy="80.4" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<polyline points="89.7,378.6 144.2,374.4 259.6,358.1 305.1,341.1 503.7,141.1 520.4,199.7 533.8,253.3 540.8,308.2 648.4,96.3 702.3,90.1" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="89.7" cy="378.6" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="95.7" y="372.6" font-size="9.5" fill="#898781">p1(c1)</text>
+<circle cx="144.2" cy="374.4" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="150.2" y="368.4" font-size="9.5" fill="#898781">p2(c8)</text>
+<circle cx="259.6" cy="358.1" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="212.4" y="352.1" font-size="9.5" fill="#898781">p2(c32)</text>
+<circle cx="305.1" cy="341.1" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="311.1" y="335.1" font-size="9.5" fill="#898781">p2(c64)</text>
+<circle cx="503.7" cy="141.1" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="509.7" y="135.1" font-size="9.5" fill="#898781">p6(c1,024)</text>
+<circle cx="520.4" cy="199.7" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="526.4" y="193.7" font-size="9.5" fill="#898781">p5(c512)</text>
+<circle cx="533.8" cy="253.3" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="539.8" y="247.3" font-size="9.5" fill="#898781">p3(c256)</text>
+<circle cx="540.8" cy="308.2" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="546.8" y="302.2" font-size="9.5" fill="#898781">p4(c256)</text>
+<circle cx="648.4" cy="96.3" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="654.4" y="109.3" font-size="9.5" fill="#898781">p7(c4,096)</text>
+<circle cx="702.3" cy="90.1" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="638.3" y="74.1" font-size="9.5" fill="#898781">p8(c8,192)</text>
+</svg>

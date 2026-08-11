@@ -1,0 +1,334 @@
+# DSv4 point 1: disagg-low-latency-1p1d-tp4-tp4-mtp (verbatim srt-slurm recipe flags).
+# 1 prefill (TP4) + 1 decode (TP4, EAGLE MTP) + 9 frontends. 2 nodes / 8 GPUs.
+# Image: pinned nightly. dynamo@81d0555 wheels from node hostPath /wheels (seeded).
+# Model: /model hostPath (seeded from gs://alisachen-models/deepseek-ai/DeepSeek-V4-Pro).
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: dsv4-p1-cd
+  namespace: dynamo-cloud
+spec:
+  numNodes: 2
+  channel:
+    resourceClaimTemplate:
+      name: dsv4-p1-cd-channel
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsv4-p1-frontend
+  namespace: dynamo-cloud
+spec:
+  selector:
+    app: dsv4-p1-frontend
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsv4-p1-frontend
+  namespace: dynamo-cloud
+spec:
+  replicas: 9
+  selector:
+    matchLabels:
+      app: dsv4-p1-frontend
+  template:
+    metadata:
+      labels:
+        app: dsv4-p1-frontend
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      containers:
+      - name: frontend
+        image: lmsysorg/sglang:nightly-dev-20260601-373cadc9
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          mkdir -p /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu
+          ln -sf /usr/local/lib/python3.12/dist-packages/.nixl_cu13.mesonpy.libs/*.so* /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu/ 2>/dev/null || true
+          pip install --quiet /wheels/*.whl
+          exec python3 -m dynamo.frontend --http-port=8000
+        env:
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        - name: DYN_REQUEST_PLANE
+          value: "nats"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "2"
+            memory: 8Gi
+        volumeMounts:
+        - {name: wheels, mountPath: /wheels, readOnly: true}
+        - {name: model, mountPath: /model, readOnly: true}
+      volumes:
+      - name: wheels
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-wheels, type: Directory}
+      - name: model
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-model, type: Directory}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsv4-p1-prefill
+  namespace: dynamo-cloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsv4-p1-prefill
+  template:
+    metadata:
+      labels:
+        app: dsv4-p1-prefill
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: compute-domain-channel
+        resourceClaimTemplateName: dsv4-p1-cd-channel
+      containers:
+      - name: prefill
+        image: lmsysorg/sglang:nightly-dev-20260601-373cadc9
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          mkdir -p /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu
+          ln -sf /usr/local/lib/python3.12/dist-packages/.nixl_cu13.mesonpy.libs/*.so* /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu/ 2>/dev/null || true
+          pip install --quiet /wheels/*.whl
+          [ -f /model/model.safetensors.index.json ] || { echo "DSV4 MODEL NOT SEEDED"; exit 1; }
+          exec python3 -m dynamo.sglang \
+            --model-path /model/ \
+            --served-model-name deepseek-ai/DeepSeek-V4-Pro \
+            --trust-remote-code \
+            --tool-call-parser deepseekv4 \
+            --disaggregation-mode prefill \
+            --disaggregation-transfer-backend mooncake \
+            --tensor-parallel-size 4 \
+            --data-parallel-size 1 \
+            --expert-parallel-size 1 \
+            --moe-runner-backend flashinfer_mxfp4 \
+            --disable-flashinfer-autotune \
+            --mem-fraction-static 0.9 \
+            --max-running-requests 8 \
+            --cuda-graph-max-bs 8 \
+            --chunked-prefill-size 32768 \
+            --disaggregation-bootstrap-port 30001 \
+            --host 0.0.0.0
+        env:
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        - name: DYN_REQUEST_PLANE
+          value: "nats"
+        # recipe prefill_environment (verbatim)
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: SGLANG_RADIX_DISABLE_REUSE
+          value: "1"
+        - name: SGLANG_JIT_DEEPGEMM_FAST_WARMUP
+          value: "1"
+        - name: SGLANG_DEFAULT_THINKING
+          value: "1"
+        - name: SGLANG_DSV4_REASONING_EFFORT
+          value: "max"
+        - name: SGLANG_OPT_SWA_SPLIT_LEAF_ON_INSERT
+          value: "1"
+        - name: NCCL_MNNVL_ENABLE
+          value: "1"
+        - name: NCCL_CUMEM_ENABLE
+          value: "1"
+        - name: SGLANG_MOONCAKE_CUSTOM_MEM_POOL
+          value: "True"
+        - name: MC_FORCE_MNNVL
+          value: "1"
+        - name: MC_TE_METRIC
+          value: "true"
+        - name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT
+          value: "100000"
+        - name: SGLANG_OPT_SWA_RELEASE_LEAF_LOCK_AFTER_WINDOW
+          value: "1"
+        # GKE canonical transport-evidence block
+        - name: UCX_TLS
+          value: "cuda_copy,cuda_ipc,tcp"
+        - name: UCX_CUDA_IPC_ENABLE_MNNVL
+          value: "y"
+        - name: UCX_MEMTYPE_CACHE
+          value: "n"
+        - name: UCX_MEMTYPE_REG_WHOLE
+          value: "n"
+        - name: UCX_PROTO_INFO
+          value: "y"
+        - name: GLOO_SOCKET_IFNAME
+          value: "eth0"
+        - name: TP_SOCKET_IFNAME
+          value: "eth0"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "64"
+            memory: 512Gi
+          limits:
+            nvidia.com/gpu: "4"
+          claims:
+          - name: compute-domain-channel
+        volumeMounts:
+        - {name: dshm, mountPath: /dev/shm}
+        - {name: wheels, mountPath: /wheels, readOnly: true}
+        - {name: model, mountPath: /model, readOnly: true}
+      volumes:
+      - name: dshm
+        emptyDir: {medium: Memory, sizeLimit: 128Gi}
+      - name: wheels
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-wheels, type: Directory}
+      - name: model
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-model, type: Directory}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsv4-p1-decode
+  namespace: dynamo-cloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsv4-p1-decode
+  template:
+    metadata:
+      labels:
+        app: dsv4-p1-decode
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      resourceClaims:
+      - name: compute-domain-channel
+        resourceClaimTemplateName: dsv4-p1-cd-channel
+      containers:
+      - name: decode
+        image: lmsysorg/sglang:nightly-dev-20260601-373cadc9
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          mkdir -p /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu
+          ln -sf /usr/local/lib/python3.12/dist-packages/.nixl_cu13.mesonpy.libs/*.so* /opt/nvidia/nvda_nixl/lib/aarch64-linux-gnu/ 2>/dev/null || true
+          pip install --quiet /wheels/*.whl
+          [ -f /model/model.safetensors.index.json ] || { echo "DSV4 MODEL NOT SEEDED"; exit 1; }
+          exec python3 -m dynamo.sglang \
+            --model-path /model/ \
+            --served-model-name deepseek-ai/DeepSeek-V4-Pro \
+            --trust-remote-code \
+            --tool-call-parser deepseekv4 \
+            --disaggregation-mode decode \
+            --disaggregation-transfer-backend mooncake \
+            --tensor-parallel-size 4 \
+            --data-parallel-size 1 \
+            --expert-parallel-size 1 \
+            --moe-runner-backend flashinfer_mxfp4 \
+            --disable-flashinfer-autotune \
+            --speculative-algo EAGLE \
+            --speculative-num-steps 3 \
+            --speculative-eagle-topk 1 \
+            --speculative-num-draft-tokens 4 \
+            --mem-fraction-static 0.9 \
+            --max-running-requests 8 \
+            --cuda-graph-max-bs 8 \
+            --swa-full-tokens-ratio 0.1 \
+            --context-length 16384 \
+            --disaggregation-bootstrap-port 30001 \
+            --host 0.0.0.0
+        env:
+        - name: ETCD_ENDPOINTS
+          value: "http://dynamo-platform-etcd.dynamo-cloud.svc.cluster.local:2379"
+        - name: NATS_SERVER
+          value: "nats://dynamo-platform-nats.dynamo-cloud.svc.cluster.local:4222"
+        - name: DYN_REQUEST_PLANE
+          value: "nats"
+        # recipe decode_environment (verbatim)
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: SGLANG_RADIX_DISABLE_REUSE
+          value: "1"
+        - name: SGLANG_JIT_DEEPGEMM_FAST_WARMUP
+          value: "1"
+        - name: SGLANG_DEFAULT_THINKING
+          value: "1"
+        - name: SGLANG_DSV4_REASONING_EFFORT
+          value: "max"
+        - name: SGLANG_OPT_SWA_SPLIT_LEAF_ON_INSERT
+          value: "1"
+        - name: NCCL_MNNVL_ENABLE
+          value: "1"
+        - name: NCCL_CUMEM_ENABLE
+          value: "1"
+        - name: SGLANG_MOONCAKE_CUSTOM_MEM_POOL
+          value: "True"
+        - name: MC_FORCE_MNNVL
+          value: "1"
+        - name: MC_TE_METRIC
+          value: "true"
+        - name: SGLANG_DISAGGREGATION_BOOTSTRAP_TIMEOUT
+          value: "100000"
+        - name: SGLANG_DISAGGREGATION_WAITING_TIMEOUT
+          value: "100000"
+        - name: SGLANG_OPT_SWA_RELEASE_LEAF_LOCK_AFTER_WINDOW
+          value: "1"
+        # GKE canonical transport-evidence block
+        - name: UCX_TLS
+          value: "cuda_copy,cuda_ipc,tcp"
+        - name: UCX_CUDA_IPC_ENABLE_MNNVL
+          value: "y"
+        - name: UCX_MEMTYPE_CACHE
+          value: "n"
+        - name: UCX_MEMTYPE_REG_WHOLE
+          value: "n"
+        - name: UCX_PROTO_INFO
+          value: "y"
+        - name: GLOO_SOCKET_IFNAME
+          value: "eth0"
+        - name: TP_SOCKET_IFNAME
+          value: "eth0"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "64"
+            memory: 512Gi
+          limits:
+            nvidia.com/gpu: "4"
+          claims:
+          - name: compute-domain-channel
+        volumeMounts:
+        - {name: dshm, mountPath: /dev/shm}
+        - {name: wheels, mountPath: /wheels, readOnly: true}
+        - {name: model, mountPath: /model, readOnly: true}
+      volumes:
+      - name: dshm
+        emptyDir: {medium: Memory, sizeLimit: 128Gi}
+      - name: wheels
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-wheels, type: Directory}
+      - name: model
+        hostPath: {path: /mnt/stateful_partition/kube-ephemeral-ssd/dsv4-model, type: Directory}

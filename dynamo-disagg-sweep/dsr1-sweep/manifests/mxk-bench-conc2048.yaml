@@ -1,0 +1,82 @@
+# M4 bench: WARMUP (rate 250, prompts=conc, per srt-slurm bench.sh convention)
+# then MEASURED run at conc 512, req_rate 700 (mid_curve benchmark section).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dsr1-mxk-bench-c2048
+  namespace: dynamo-cloud
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dsr1-mxk-bench
+    spec:
+      restartPolicy: Never
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      containers:
+      - name: bench
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          FRONTEND=dsr1-mxk-frontend.dynamo-cloud.svc.cluster.local
+          python3 -c "import aiohttp, numpy, pandas, datasets, PIL, tqdm, transformers" 2>/dev/null \
+            || pip install --quiet aiohttp numpy pandas datasets Pillow tqdm transformers
+          for i in $(seq 1 120); do
+            curl -sf http://${FRONTEND}:8000/v1/models | grep -q DeepSeek && break; sleep 10
+          done
+          curl -sf http://${FRONTEND}:8000/v1/models | grep -q DeepSeek || { echo "FRONTEND NOT SERVING"; exit 1; }
+          echo "frontend serving"
+          cp /sa-bench/*.py /tmp/ && cd /tmp && mkdir -p /tmp/results
+          CONC=2048
+          echo "===== WARMUP (prompts=3xCONC, rate 250) ====="
+          python3 -u benchmark_serving.py \
+            --model deepseek-ai/DeepSeek-R1 --tokenizer nvidia/DeepSeek-R1-0528-NVFP4-v2 \
+            --host ${FRONTEND} --port 8000 \
+            --backend dynamo --endpoint /v1/completions \
+            --disable-tqdm --dataset-name random \
+            --num-prompts $((CONC*3)) \
+            --random-input-len 8192 --random-output-len 1024 --random-range-ratio 0.8 \
+            --ignore-eos --request-rate 250 \
+            --percentile-metrics ttft,tpot,itl,e2el \
+            --max-concurrency ${CONC} --trust-remote-code
+          echo "===== MEASURED (prompts=10xCONC, rate 700) ====="
+          python3 -u benchmark_serving.py \
+            --model deepseek-ai/DeepSeek-R1 --tokenizer nvidia/DeepSeek-R1-0528-NVFP4-v2 \
+            --host ${FRONTEND} --port 8000 \
+            --backend dynamo --endpoint /v1/completions \
+            --disable-tqdm --dataset-name random \
+            --num-prompts $((CONC*10)) \
+            --random-input-len 8192 --random-output-len 1024 --random-range-ratio 0.8 \
+            --ignore-eos --request-rate 700 \
+            --percentile-metrics ttft,tpot,itl,e2el \
+            --max-concurrency ${CONC} --trust-remote-code \
+            --save-result --result-dir /tmp/results \
+            --result-filename results_concurrency_${CONC}_gpus_72_ctx_40_gen_32_kvheadroom.json
+          echo "--- RESULT JSON"
+          cat /tmp/results/results_concurrency_${CONC}_gpus_72_ctx_40_gen_32_kvheadroom.json
+          echo ""
+          for f in /tmp/results/*.json; do
+            python3 -c "import json,sys; d=json.load(open('$f')); print('=== SLIM-RESULT', '$f', json.dumps({k:v for k,v in d.items() if not isinstance(v,list)}))"
+          done
+
+          echo "MX MAX_TPT BENCH C2048 PASSED"
+        env:
+        - name: HF_HOME
+          value: /tmp/hf
+        resources:
+          requests:
+            cpu: "16"
+            memory: 32Gi
+        volumeMounts:
+        - name: sa-bench
+          mountPath: /sa-bench
+      volumes:
+      - name: sa-bench
+        configMap:
+          name: sa-bench-scripts

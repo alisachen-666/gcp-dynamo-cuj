@@ -3,39 +3,6 @@
 Workspace for sweeping DeepSeek-R1 inference configurations and building
 throughput-vs-latency Pareto curves.
 
-## ACTIVE CLUSTER (switched 2026-07-29): `REDACTED-GKE-CLUSTER-OLD`, project `REDACTED-GCP-PROJECT`, region us-east5
-
-- kubeconfig context: `gke_REDACTED-GCP-PROJECT_us-east5_REDACTED-GKE-CLUSTER-OLD` (current-context on this VM)
-- Auth: user ADC (`<user>@google.com`) copied from cloudtop — **expires ~daily**
-  (`invalid_rapt` corp reauth); re-copy `~/.config/gcloud/application_default_credentials.json`
-  from cloudtop or get durable SA RBAC from the cluster owner (we lack
-  `container.clusterRoleBindings.create` there).
-- Capacity (at switch time, ALL IDLE — zero GPU pods):
-  - **np-2: 18 nodes x 4 GB300, single subblock = FULL NVL72 domain (72 GPUs)** -> mid_curve capable
-  - np-1: 17 nodes, different subblock (one short of full domain)
-  - same machine type (`a4x-maxgpu-4g-metal`) + same two taints as pr9
-- Infra present: LWS, Kueue, JobSet, nvidia-dra-driver-gpu (ComputeDomain), networking-DRA,
-  gcsfuse + lustre storage classes, managed Prometheus
-- Infra MISSING vs pr9: **no Dynamo operator/platform, no NATS** — install via NGC helm charts
-  (needs NGC key) or go operator-less (plain Deployments/LWS + NATS, srt-slurm-style, per IMAGE
-  PLAN fallback). Also no `hf-token-secret`/`nvcr-secret` yet — create in target namespace.
-
-(Sections below about REDACTED-GKE-CLUSTER-OLD describe the OLD cluster; smoke tests all passed there and the
-manifests/tooling carry over unchanged.)
-
-## Cluster facts (verified 2026-07-28)
-
-- Cluster: `REDACTED-GKE-CLUSTER-OLD`, project `gke-aishared-gsc-dev`, **regional** in `us-east5` (nodes in us-east5-c)
-- Access: kubeconfig on this VM (`~/.kube/config`); auth via VM service account
-  `alisa-gcs-sa@gke-aishared-gsc-dev.iam.gserviceaccount.com`, granted cluster-admin via
-  clusterrolebindings `alisa-sa-admin` (email) + `alisa-sa-admin-id` (numeric ID `103697796161254948063`)
-- GPU nodes: 2 pools (`np-1`, `np-2`), 2 nodes each, machine `a4x-maxgpu-4g-metal`
-  - **arm64** (Grace CPU, 144 cores), 983 GB RAM, 4x NVIDIA GB300 per node, ~11 TB local SSD
-  - Taints: `nvidia.com/gpu=present:NoSchedule` AND `kubernetes.io/arch=arm64:NoSchedule` (both need tolerations)
-  - Topology labels: `cloud.google.com/gce-topology-{block,subblock,host}` (NVLink partition via DRA available: `nvidia-dra-driver-gpu` ns)
-- Cluster infra available: LWS, Kueue, JobSet, Dynamo, Lustre CSI, gcsfuse storage classes, DCGM + managed Prometheus
-- Proven images on this hardware: `lmsysorg/sglang:latest` (qwen benchmark pod), `lmsysorg/sglang:kimi-k3`
-
 ## Model / serving baseline — UPDATED 2026-07-28 after InferenceX comparison
 
 Target reference: InferenceX `dsr1-fp4-gb300-dynamo-sglang` 8k1k **mid_curve**
@@ -52,18 +19,6 @@ Target reference: InferenceX `dsr1-fp4-gb300-dynamo-sglang` 8k1k **mid_curve**
   OSL 1024, range-ratio 0.8, ignore-eos, concurrencies 512/2048/4096
 - OLD baseline manifest (aggregated FP8 TP=4, superseded): `manifests/dsr1-sglang.yaml`
 - NOTE: a leftover ClusterIP Service `dsr1-sglang` exists in `default` ns (harmless; reuse or delete)
-
-## GPU occupancy (as of setup — recheck before launching!)
-
-- `np-1` both nodes: kimi-k3 (2x 4 GPUs), `np-2/cx7l`: qwen benchmark (4 GPUs)
-- `np-2/zcl4`: FREE (4 GPUs) — our target node
-
-Recheck with:
-```
-kubectl get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running") |
-  select([.spec.containers[].resources.requests["nvidia.com/gpu"] // empty] | length > 0) |
-  "\(.metadata.name)\t\(.spec.nodeName)"'
-```
 
 ## Smoke tests (run BEFORE any e2e attempt)
 
@@ -198,14 +153,14 @@ workers + `python3 -m dynamo.frontend` + nginx, with NATS request plane (srt-slu
 ## Layout
 
 ```
-dsr1-sweep/     DeepSeek-R1 FP4 (InferenceX dsr1-fp4-gb300-dynamo-sglang)
+dynamo-disagg-sweep/dsr1-sweep/     DeepSeek-R1 FP4 (InferenceX dsr1-fp4-gb300-dynamo-sglang)
   manifests/      smoke tests, MNNVL fabric tests, 1P1D, low_latency (1P4D), mid_curve (6P+12D)
   reference/      vendored srt-slurm recipes, InferenceX commit, gpu-recipes, COMPARISON.md
   results/        raw sa-bench JSONs (gitignored; archived in GCS)
   results-summary/  metrics-only copies tracked in git (p90/p95 precomputed)
   run-smoke.sh, seed-model-all-nodes.sh, gen-dsr1-report.py
 
-dsv4-sweep/     DeepSeek-V4-Pro mxfp4 + EAGLE MTP (InferenceX dsv4-fp4-gb300-dynamo-sglang-mtp)
+dynamo-disagg-sweep/dsv4-sweep/     DeepSeek-V4-Pro mxfp4 + EAGLE MTP (InferenceX dsv4-fp4-gb300-dynamo-sglang-mtp)
   PLAN.md         benchmarking plan + error log of every issue hit and fixed
   manifests/, reference/, results/, results-summary/
   gen-point.py, run-point.sh, seed-dsv4-nodes.sh, gen-dsv4-report.py
@@ -214,14 +169,14 @@ common/         shared tooling
   sa-bench/       benchmark client vendored from srt-slurm (+ DSv4 tokenizers)
   stage-model-to-gcs.sh, slim-results.py, run-rdma-test.sh
 
-reports/        benchmark reports (DSR1, DSv4) + GKE RDMA issue writeup
+dynamo-disagg-sweep/reports/        benchmark reports (DSR1, DSv4) + GKE RDMA issue writeup
 ```
 
 Regenerate reports after new results:
 ```
 python3 common/slim-results.py       # raw -> results-summary/
-python3 dsr1-sweep/gen-dsr1-report.py
-python3 dsv4-sweep/gen-dsv4-report.py
+python3 dynamo-disagg-sweep/dsr1-sweep/gen-dsr1-report.py
+python3 dynamo-disagg-sweep/dsv4-sweep/gen-dsv4-report.py
 ```
 
 ## Model weights (staged 2026-07-30)
@@ -247,7 +202,7 @@ Match srt-slurm/InferenceX bench.sh defaults exactly (`NUM_WARMUP_MULT=2`, `NUM_
    flat (+1.4%) — proving it's measurement fairness, not a server change.
 
 Any result taken with smaller multipliers must be labeled non-comparable (see `(mult10)`
-labels in `reports/benchmark-report-dsr1-8k1k.md`). Applies to every config (low_latency,
+labels in `dynamo-disagg-sweep/reports/benchmark-report-dsr1-8k1k.md`). Applies to every config (low_latency,
 mid_curve, max_tpt, DSv4 sweep).
 
 ## Transport-evidence policy (adopted 2026-07-29)

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="760" height="420" fill="#fcfcfb" rx="8"/>
+<text x="56" y="20" font-size="12.5" fill="#52514e" font-weight="600">DeepSeek-R1 FP4 — KV over GPUDirect RDMA — total throughput per GPU (tok/s)</text>
+<line x1="568" x2="586" y1="14" y2="14" stroke="#2a78d6" stroke-width="2"/>
+<circle cx="577" cy="14" r="3.2" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="590" y="18" font-size="10.5" fill="#52514e">Ours: GKE, RDMA KV</text>
+<line x1="568" x2="586" y1="29" y2="29" stroke="#eb6834" stroke-width="2"/>
+<circle cx="577" cy="29" r="3.2" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<text x="590" y="33" font-size="10.5" fill="#52514e">InferenceMax (published)</text>
+<line x1="56" x2="736" y1="384.0" y2="384.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="387.5" font-size="10.5" fill="#898781" text-anchor="end">0</text>
+<line x1="56" x2="736" y1="298.7" y2="298.7" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="302.2" font-size="10.5" fill="#898781" text-anchor="end">2k</text>
+<line x1="56" x2="736" y1="213.5" y2="213.5" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="217.0" font-size="10.5" fill="#898781" text-anchor="end">4k</text>
+<line x1="56" x2="736" y1="128.2" y2="128.2" stroke="#e1e0d9" stroke-width="1"/>
+<text x="50" y="131.7" font-size="10.5" fill="#898781" text-anchor="end">6k</text>
+<line x1="112.3" x2="112.3" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="112.3" y="400" font-size="10.5" fill="#898781" text-anchor="middle">0.3</text>
+<line x1="239.8" x2="239.8" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="239.8" y="400" font-size="10.5" fill="#898781" text-anchor="middle">1</text>
+<line x1="356.1" x2="356.1" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="356.1" y="400" font-size="10.5" fill="#898781" text-anchor="middle">3</text>
+<line x1="483.5" x2="483.5" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="483.5" y="400" font-size="10.5" fill="#898781" text-anchor="middle">10</text>
+<line x1="599.8" x2="599.8" y1="384" y2="388" stroke="#898781" stroke-width="1"/>
+<text x="599.8" y="400" font-size="10.5" fill="#898781" text-anchor="middle">30</text>
+<line x1="56" x2="736" y1="384" y2="384" stroke="#898781" stroke-width="1"/>
+<text x="396.0" y="414" font-size="11" fill="#52514e" text-anchor="middle">Median time-to-first-token (s, log scale)</text>
+<polyline points="87.8,373.5 102.1,364.5 188.8,325.4 206.1,294.7 369.0,270.9 486.0,80.4 606.8,169.6 704.2,188.1" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="87.8" cy="373.5" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="102.1" cy="364.5" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="188.8" cy="325.4" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="206.1" cy="294.7" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="369.0" cy="270.9" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="486.0" cy="80.4" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="606.8" cy="169.6" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<circle cx="704.2" cy="188.1" r="3.6" fill="#fcfcfb" stroke="#eb6834" stroke-width="1.8"/>
+<polyline points="87.9,372.6 135.5,362.9 217.7,324.5 232.0,291.7 269.8,258.4 491.5,82.1 597.4,172.2 694.3,171.4" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="87.9" cy="372.6" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="93.9" y="356.6" font-size="9.5" fill="#898781">p1(c4)</text>
+<circle cx="135.5" cy="362.9" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="141.5" y="356.9" font-size="9.5" fill="#898781">p2(c8)</text>
+<circle cx="217.7" cy="324.5" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="223.7" y="318.5" font-size="9.5" fill="#898781">p3(c32)</text>
+<circle cx="232.0" cy="291.7" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="238.0" y="285.7" font-size="9.5" fill="#898781">p4(c64)</text>
+<circle cx="269.8" cy="258.4" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="275.8" y="252.4" font-size="9.5" fill="#898781">p5(c512)</text>
+<circle cx="491.5" cy="82.1" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="497.5" y="76.1" font-size="9.5" fill="#898781">p8(c2,048)</text>
+<circle cx="597.4" cy="172.2" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="603.4" y="166.2" font-size="9.5" fill="#898781">p6(c2,048)</text>
+<circle cx="694.3" cy="171.4" r="3.6" fill="#fcfcfb" stroke="#2a78d6" stroke-width="1.8"/>
+<text x="630.3" y="184.4" font-size="9.5" fill="#898781">p7(c4,096)</text>
+</svg>

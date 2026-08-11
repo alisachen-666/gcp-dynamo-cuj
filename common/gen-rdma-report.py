@@ -100,26 +100,31 @@ def _network_table(title, rows, REGION, pick):
     """Dual-source table in the main-report format: InferenceMax row (absolutes) then the
     GCP row with value (gap vs InferenceMax) on every metric. `pick(row)` -> (tag, data)."""
     doc = [title, '',
-           '| Region | Topology | Conc | Sources | Out/decode-GPU (tok/s) | TPOT mean (ms) | TTFT med (s) | Median ITL (s) |',
-           '|---|---|---|---|---|---|---|---|']
+           '| Pt | Region | Topology | Conc | Sources | Total Tput (tok/s/GPU) | Input Tput (tok/s/GPU) | Out/decode-GPU (tok/s) | TPOT mean (ms) | TTFT med (s) | Median ITL (s) |',
+           '|---|---|---|---|---|---|---|---|---|---|---|']
     def gv(a, b, fmt=',.1f'):
         return f'{a:{fmt}} ({100*(a-b)/b:+.1f}%)'
-    for topo, conc, r, mn, rd, dg in rows:
+    for topo, conc, r, mn, rd, dg, tot in rows:
         reg = REGION.get((r['pg'], r['dg']), '')
-        doc.append(f"| {reg} | {topo} | {conc} | InferenceMax | {r['out_per_gpu']:,.1f} | "
+        pt = dsr1.DSR1_PT.get((r['pg'], r['dg'], conc), '')
+        doc.append(f"| {pt} | {reg} | {topo} | {conc} | InferenceMax | {r['total_per_gpu']:,.1f} | {r['in_per_gpu']:,.1f} | {r['out_per_gpu']:,.1f} | "
                    f"{r['mean_tpot_ms']:.2f} | {r['median_ttft_ms']/1000:.2f} | {r['median_itl_ms']/1000:.2f} |")
         rec = pick((topo, conc, r, mn, rd, dg))
         if rec:
             tag, d = rec
             out = d['output_throughput'] / dg
+            totv = d['total_token_throughput'] / tot
+            # InferenceX's Input Tput/GPU is normalized per PREFILL GPU (verified: their
+            # ll conc-4 input 1099.5 = (total-output)*20/4), matching the summary tables
+            inv = d['total_input_tokens'] / d['duration'] / r['pg']
             lc = dsr1.linkcell(tag, r['pg'], r['dg'], conc)
             label = 'GCP bench with GKE' + (f' {tag}' if tag else '')
-            doc.append(f"| | | | {label}{lc} | {gv(out, r['out_per_gpu'])} | "
+            doc.append(f"| | | | | {label}{lc} | {gv(totv, r['total_per_gpu'])} | {gv(inv, r['in_per_gpu'])} | {gv(out, r['out_per_gpu'])} | "
                        f"{gv(d['mean_tpot_ms'], r['mean_tpot_ms'], '.2f')} | "
                        f"{gv(d['median_ttft_ms']/1000, r['median_ttft_ms']/1000, '.2f')} | "
                        f"{gv(d['median_itl_ms']/1000, r['median_itl_ms']/1000, '.2f')} |")
         else:
-            doc.append('| | | | GCP bench with GKE | *pending* | — | — | — |')
+            doc.append('| | | | | GCP bench with GKE | *pending* | — | — | — | — | — |')
     return doc
 
 
@@ -127,7 +132,7 @@ def dsr1_dual_tables():
     """Two per-network dual-source tables (MNNVL final vs RDMA) + computed trend deltas."""
     rows0 = dsr1_rows()
     REGION = {(4, 16): 'Low latency', (24, 48): 'Mid curve', (40, 32): 'Max throughput'}
-    pairs = [(topo, conc, r, mn, rd, dg) for topo, conc, r, mn, rd, dg, tot in rows0]
+    pairs = list(rows0)  # (topo, conc, r, mn, rd, dg, tot)
     doc = ['## DSR1-FP4: MNNVL vs RDMA — per-network tables', '',
            'Format matches the main summary table: InferenceMax row = absolute values; GCP row = '
            '`value (gap vs InferenceMax)` per metric. Throughput: higher is better; TPOT/TTFT/ITL: '
@@ -139,19 +144,25 @@ def dsr1_dual_tables():
                           pairs, REGION,
                           lambda p: (('RDMA-KV', p[4][1] if isinstance(p[4], tuple) else p[4]) if p[4] else None))
     doc += ['', '### Network delta (RDMA vs MNNVL, same recipe/methodology/cluster)', '',
-            '| Region | Conc | Δ Out tput | Δ TPOT (lower better) | Δ TTFT med | Δ ITL med |',
-            '|---|---|---|---|---|---|']
-    for topo, conc, r, mn, rd, dg in pairs:
+            'Cells show `MNNVL value → RDMA value (Δ%)` — the two arms\' measured data side by',
+            'side. Out tput: higher better; TPOT/TTFT/ITL: lower better.', '',
+            '| Pt | Region | Conc | Out/decode-GPU (tok/s) | TPOT mean (ms) | TTFT med (s) | ITL med (s) |',
+            '|---|---|---|---|---|---|---|']
+    for topo, conc, r, mn, rd, dg, tot in pairs:
         reg = REGION.get((r['pg'], r['dg']), '')
+        pt = dsr1.DSR1_PT.get((r['pg'], r['dg'], conc), '')
         if mn and rd:
             _, md = mn
             d = rd[1] if isinstance(rd, tuple) else rd
-            doc.append(f"| {reg} | {conc} | {pct(d['output_throughput'], md['output_throughput'])} | "
-                       f"{pct(d['mean_tpot_ms'], md['mean_tpot_ms'])} | "
-                       f"{pct(d['median_ttft_ms'], md['median_ttft_ms'])} | "
-                       f"{pct(d['median_itl_ms'], md['median_itl_ms'])} |")
+            def ab(mv, rv, fmt=',.1f'):
+                return f'{mv:{fmt}} → {rv:{fmt}} ({100*(rv-mv)/mv:+.1f}%)'
+            doc.append(f"| {pt} | {reg} | {conc} | "
+                       f"{ab(md['output_throughput']/dg, d['output_throughput']/dg)} | "
+                       f"{ab(md['mean_tpot_ms'], d['mean_tpot_ms'], '.2f')} | "
+                       f"{ab(md['median_ttft_ms']/1000, d['median_ttft_ms']/1000, '.2f')} | "
+                       f"{ab(md['median_itl_ms']/1000, d['median_itl_ms']/1000, '.2f')} |")
         else:
-            doc.append(f'| {reg} | {conc} | *pending* | — | — | — |')
+            doc.append(f'| {pt} | {reg} | {conc} | *pending* | — | — | — |')
     doc += ['', """### Trend analysis: what changing the KV network does
 
 - **Decode-side contention relief grows with concurrency.** MNNVL KV transfers ride the same

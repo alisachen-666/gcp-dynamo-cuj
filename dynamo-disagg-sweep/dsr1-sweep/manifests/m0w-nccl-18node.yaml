@@ -1,0 +1,134 @@
+# M0: cross-node NVLink (MNNVL) smoke — 2 nodes x 4 GPUs on np-2 (one NVL72 subblock).
+# Wiring mirrors gpu-recipes a4xmax dynamo-deployment: ComputeDomain channel claim + all-mrdma.
+apiVersion: resource.nvidia.com/v1beta1
+kind: ComputeDomain
+metadata:
+  name: dsr1-m0w-cd
+  namespace: default
+spec:
+  numNodes: 18
+  channel:
+    resourceClaimTemplate:
+      name: dsr1-m0w-cd-channel
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: all-mrdma
+  namespace: default
+spec:
+  spec:
+    devices:
+      requests:
+      - name: req-mrdma
+        exactly:
+          deviceClassName: mrdma.google.com
+          allocationMode: ExactCount
+          count: 8
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsr1-m0w
+  namespace: default
+spec:
+  clusterIP: None
+  selector:
+    job-name: dsr1-m0w-nccl
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dsr1-m0w-nccl
+  namespace: default
+spec:
+  backoffLimit: 0
+  completions: 18
+  parallelism: 18
+  completionMode: Indexed
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dsr1-m0w-nccl
+    spec:
+      restartPolicy: Never
+      subdomain: dsr1-m0w
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: kubernetes.io/arch
+        operator: Equal
+        value: arm64
+        effect: NoSchedule
+      # NOTE: no rdma claim — this cluster's dra.net publishes no rdma=true devices on np-2,
+      # and intra-NVL72 traffic uses NVLink via the ComputeDomain channel anyway.
+      resourceClaims:
+      - name: compute-domain-channel
+        resourceClaimTemplateName: dsr1-m0w-cd-channel
+      containers:
+      - name: nccl
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          echo "node_rank=$JOB_COMPLETION_INDEX host=$(hostname)"
+          cat > /tmp/allreduce_bw.py <<'EOF'
+          import os, time, torch, torch.distributed as dist
+          dist.init_process_group("nccl")
+          r, ws = dist.get_rank(), dist.get_world_size()
+          torch.cuda.set_device(r % 4)
+          assert ws == 72, f"expected world_size 72, got {ws}"
+          if r == 0:
+              print("nccl version:", torch.cuda.nccl.version(), flush=True)
+          n = 256 * 1024 * 1024  # 1 GiB fp32
+          x = torch.ones(n, device="cuda")
+          for _ in range(5):  # warmup
+              dist.all_reduce(x)
+          torch.cuda.synchronize()
+          iters = 20
+          t0 = time.perf_counter()
+          for _ in range(iters):
+              dist.all_reduce(x)
+          torch.cuda.synchronize()
+          dt = (time.perf_counter() - t0) / iters
+          size = n * 4
+          busbw = 2 * (ws - 1) / ws * size / dt / 1e9
+          if r == 0:
+              print(f"allreduce 1GiB x{iters}: {dt*1e3:.2f} ms/iter, busbw {busbw:.1f} GB/s", flush=True)
+          dist.barrier()
+          print(f"rank {r}: OK", flush=True)
+          EOF
+          export NCCL_MNNVL_ENABLE=1
+          export NCCL_CUMEM_ENABLE=1
+          export NCCL_DEBUG=INFO
+          export NCCL_DEBUG_SUBSYS=INIT
+          export GLOO_SOCKET_IFNAME=eth0
+          python3 -m torch.distributed.run \
+            --nnodes=18 --nproc_per_node=4 \
+            --node_rank=$JOB_COMPLETION_INDEX \
+            --master_addr=dsr1-m0w-nccl-0.dsr1-m0w.default.svc.cluster.local \
+            --master_port=29500 \
+            /tmp/allreduce_bw.py 2>&1 | grep -vE "NCCL INFO (Channel|P2P Chunk|Connected|Trees|comm 0x)"
+          echo "M0 NODE $JOB_COMPLETION_INDEX PASSED"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "16"
+            memory: 64Gi
+          limits:
+            nvidia.com/gpu: "4"
+          claims:
+          - name: compute-domain-channel
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 16Gi

@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dsr1-smoke-sanity
+  namespace: default
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dsr1-smoke-sanity
+    spec:
+      restartPolicy: Never
+      nodeSelector:
+        cloud.google.com/gke-nodepool: np-3
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      - key: kubernetes.io/arch
+        operator: Equal
+        value: arm64
+        effect: NoSchedule
+      containers:
+      - name: sanity
+        # EXACT InferenceX worker image (perf parity requires image parity).
+        # Dynamo is NOT in this image - installed below as ai-dynamo==0.8.1 wheels,
+        # exactly like srt-slurm's dynamo_wheels.py does at job start.
+        image: lmsysorg/sglang:v0.5.8.post1-cu130-runtime
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -e
+          echo "===== nvidia-smi ====="
+          nvidia-smi
+          echo "===== python env checks ====="
+          python3 - <<'EOF'
+          import torch
+          print("torch", torch.__version__, "| cuda", torch.version.cuda)
+          print("cuda available:", torch.cuda.is_available(), "| devices:", torch.cuda.device_count())
+          for i in range(torch.cuda.device_count()):
+              print(f"  gpu{i}: {torch.cuda.get_device_name(i)} capability={torch.cuda.get_device_capability(i)}")
+          import sglang; print("sglang", sglang.__version__)
+          try:
+              import flashinfer; print("flashinfer", getattr(flashinfer, "__version__", "present"))
+          except Exception as e:
+              print("flashinfer MISSING:", e)
+          try:
+              import sgl_kernel; print("sgl_kernel OK")
+          except Exception as e:
+              print("sgl_kernel MISSING:", e)
+          try:
+              import deep_ep; print("deep_ep OK")
+          except Exception as e:
+              print("deep_ep MISSING (needed for multi-node wide-EP later):", e)
+          try:
+              import nixl; print("nixl OK (disagg KV transfer)")
+          except Exception as e:
+              print("nixl MISSING (needed for disagg P->D transfer):", e)
+          EOF
+          echo "===== dynamo worker stack (srt-slurm parity: install 0.8.1 wheels at runtime) ====="
+          python3 -c "import dynamo" 2>/dev/null && echo "WARNING: dynamo unexpectedly pre-installed" || {
+            echo "installing ai-dynamo==0.8.1 wheels (matches srt-slurm dynamo_wheels.py)"
+            pip install --quiet "ai-dynamo-runtime==0.8.1" "ai-dynamo==0.8.1"
+          }
+          python3 - <<'EOF'
+          import dynamo
+          print("ai-dynamo import OK, version:", getattr(dynamo, "__version__", "?"))
+          import importlib
+          for mod in ["dynamo.sglang", "dynamo.runtime"]:
+              importlib.import_module(mod); print(mod, "OK")
+          EOF
+          echo "===== 4-GPU NCCL allreduce ====="
+          cat > /tmp/allreduce.py <<'EOF'
+          import torch, torch.distributed as dist
+          dist.init_process_group("nccl")
+          r = dist.get_rank()
+          torch.cuda.set_device(r)
+          x = torch.ones(1 << 20, device="cuda")
+          dist.all_reduce(x)
+          torch.cuda.synchronize()
+          print(f"rank {r}: NCCL allreduce OK val={int(x[0].item())}")
+          EOF
+          python3 -m torch.distributed.run --nproc_per_node=4 /tmp/allreduce.py
+          echo "SANITY PASSED"
+        resources:
+          requests:
+            nvidia.com/gpu: "4"
+            cpu: "16"
+            memory: 64Gi
+          limits:
+            nvidia.com/gpu: "4"
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 16Gi

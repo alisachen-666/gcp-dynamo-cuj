@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="900" height="560" fill="#fcfcfb" rx="8"/>
+<text x="24" y="26" font-size="14" fill="#52514e" font-weight="600">Bare-metal Slurm (InferenceX) vs GKE (ours) — same hardware, different platform stack</text>
+<text x="342.0" y="72" font-size="12.5" fill="#eb6834" text-anchor="middle" font-weight="600">InferenceX — bare-metal Slurm</text>
+<text x="706.0" y="72" font-size="12.5" fill="#2a78d6" text-anchor="middle" font-weight="600">Ours — GKE A4X Max</text>
+<text x="156" y="124.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">Launcher</text>
+<rect x="168" y="92" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="114" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">srt-slurm launch scripts</text>
+<text x="342.0" y="130" font-size="9.5" fill="#898781" text-anchor="middle">sbatch/srun per run</text>
+<rect x="532" y="92" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="114" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">run-point-v2.sh pipeline</text>
+<text x="706.0" y="130" font-size="9.5" fill="#898781" text-anchor="middle">gates · filler · record · assert</text>
+<text x="156" y="190.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">Admission</text>
+<rect x="168" y="158" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="180" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Scheduler request queue</text>
+<text x="342.0" y="196" font-size="9.5" fill="#898781" text-anchor="middle">requests held, batched entry</text>
+<rect x="532" y="158" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="180" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Eager admission</text>
+<text x="706.0" y="196" font-size="9.5" fill="#898781" text-anchor="middle">K8s Service → Dynamo frontends</text>
+<text x="156" y="256.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">Workers</text>
+<rect x="168" y="224" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="246" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Processes on long-lived nodes</text>
+<text x="342.0" y="262" font-size="9.5" fill="#898781" text-anchor="middle">state persists across runs</text>
+<rect x="532" y="224" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="246" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Pods (Deployments/StatefulSets)</text>
+<text x="706.0" y="262" font-size="9.5" fill="#898781" text-anchor="middle">fresh filesystem per deploy</text>
+<text x="156" y="322.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">IMEX / MNNVL</text>
+<rect x="168" y="290" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="312" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Slurm prolog configures IMEX</text>
+<text x="342.0" y="328" font-size="9.5" fill="#898781" text-anchor="middle">node-level, out of band</text>
+<rect x="532" y="290" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="312" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">DRA ComputeDomain</text>
+<text x="706.0" y="328" font-size="9.5" fill="#898781" text-anchor="middle">IMEX channels injected per claim</text>
+<text x="156" y="388.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">KV transport</text>
+<rect x="168" y="356" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="378" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">MNNVL only (custom UCX build)</text>
+<text x="342.0" y="394" font-size="9.5" fill="#898781" text-anchor="middle">/usr/local/ucx, tuned lanes</text>
+<rect x="532" y="356" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="378" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">MNNVL (NIXL wheel) or GPUDirect RDMA</text>
+<text x="706.0" y="394" font-size="9.5" fill="#898781" text-anchor="middle">DraNet NICs · UCX rev4 lane fix</text>
+<text x="156" y="454.0" font-size="10" fill="#898781" text-anchor="end" font-weight="600">JIT caches</text>
+<rect x="168" y="422" width="348" height="56" fill="#ffffff" stroke="#eb6834" stroke-width="1.2" rx="6"/>
+<text x="342.0" y="444" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Warm across runs</text>
+<text x="342.0" y="460" font-size="9.5" fill="#898781" text-anchor="middle">persistent node disk, free</text>
+<rect x="532" y="422" width="348" height="56" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
+<text x="706.0" y="444" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">hostPath cache + filler pass</text>
+<text x="706.0" y="460" font-size="9.5" fill="#898781" text-anchor="middle">assertion stamps VALID/SUSPECT</text>
+<rect x="168" y="494" width="712" height="52" fill="none" stroke="#e1e0d9" stroke-width="1.6" rx="8"/>
+<text x="524.0" y="515" font-size="11" fill="#52514e" text-anchor="middle" font-weight="600">Identical below this line</text>
+<text x="524.0" y="532" font-size="9.5" fill="#898781" text-anchor="middle">GB300 NVL72 (18 nodes × 4 GPU) · NVFP4 models · sglang engine + vendored per-point flags · sa-bench 2×warmup + 10×measured</text>
+</svg>

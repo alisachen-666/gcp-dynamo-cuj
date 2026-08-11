@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dsr1-sglang
+  namespace: default
+  labels:
+    app: dsr1-sglang
+spec:
+  restartPolicy: Never
+  nodeSelector:
+    cloud.google.com/gke-nodepool: np-3
+  tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  - key: kubernetes.io/arch
+    operator: Equal
+    value: arm64
+    effect: NoSchedule
+  containers:
+  - name: sglang
+    image: lmsysorg/sglang:latest
+    command: ["python3", "-m", "sglang.launch_server"]
+    args:
+    - --model-path=deepseek-ai/DeepSeek-R1
+    - --tp=4
+    - --host=0.0.0.0
+    - --port=30000
+    env:
+    - name: HF_HUB_ENABLE_HF_TRANSFER
+      value: "1"
+    - name: HF_HOME
+      value: /data/hf
+    resources:
+      requests:
+        nvidia.com/gpu: "4"
+        cpu: "32"
+        memory: 256Gi
+      limits:
+        nvidia.com/gpu: "4"
+    ports:
+    - containerPort: 30000
+    volumeMounts:
+    - name: dshm
+      mountPath: /dev/shm
+    - name: model-cache
+      mountPath: /data/hf
+    startupProbe:
+      httpGet:
+        path: /health
+        port: 30000
+      failureThreshold: 720
+      periodSeconds: 10
+  volumes:
+  - name: dshm
+    emptyDir:
+      medium: Memory
+      sizeLimit: 128Gi
+  - name: model-cache
+    emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsr1-sglang
+  namespace: default
+spec:
+  selector:
+    app: dsr1-sglang
+  ports:
+  - port: 30000
+    targetPort: 30000

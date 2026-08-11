@@ -1,0 +1,26 @@
+=== UCX wireup errors (prefill 6zc6q; 96 total, two bursts 00:33Z and 05:49Z) ===
+[1785976414.424813] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:338  :a]          wireup.c:439  UCX  ERROR   ep 0xeb0f77b40100: no remote ep address for lane[0]->remote_lane[0]
+[1785976414.488895] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:339  :2]          wireup.c:439  UCX  ERROR   ep 0xed5034f10100: no remote ep address for lane[0]->remote_lane[0]
+[1785976414.490608] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:338  :2]          wireup.c:439  UCX  ERROR   ep 0xeb0f77b40140: no remote ep address for lane[0]->remote_lane[0]
+[1785976414.682210] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:339  :a]          wireup.c:439  UCX  ERROR   ep 0xed5034f10140: no remote ep address for lane[0]->remote_lane[0]
+[1785976414.820282] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:339  :2]          wireup.c:439  UCX  ERROR   ep 0xed5034f10100: no remote ep address for lane[0]->remote_lane[0]
+[1785976414.931053] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:338  :2]          wireup.c:439  UCX  ERROR   ep 0xeb0f77b40100: no remote ep address for lane[0]->remote_lane[0]
+
+=== TCP software-fallback protocol selections (same pod; KV bulk on tcp, not rc_mlx5) ===
+[1785975865.618861] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :1]   |                      2049..inf | zero-copy | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.620448] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:337  :1]   |                       221..inf | zero-copy | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.638200] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :1]   |                      2049..inf | zero-copy                | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.638232] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:337  :1]   |                       221..inf | zero-copy                | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.655554] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :1]   |                      2049..inf | zero-copy      | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.656684] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:337  :1]   |                       221..inf | zero-copy      | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.759784] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:337  :1]   |                       221..inf | zero-copy | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+[1785975865.761035] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :1]   |                      2049..inf | zero-copy | 50% on tcp/gpu0ipvlan0 and 50% on tcp/gpu0ipvlan1 |
+
+=== healthy-path contrast (same pod, symmetric pairs still on rc_mlx5) ===
+[1785976448.122860] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :0]   |                        0..2038 | short                          | rc_mlx5/mlx5_0:1/path0 |
+[1785976448.122862] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :0]   |                     2039..8184 | zero-copy                      | rc_mlx5/mlx5_0:1/path0 |
+[1785976448.122863] [dsr1-m4r-prefill-c97c4fdd8-6zc6q:336  :0]   |                      8185..inf | multi-frag zero-copy           | rc_mlx5/mlx5_0:1/path0 |
+
+=== crash cascade (vrrtw, 6 restarts): gloo peer death, not a local UCX abort ===
+RuntimeError: [gloo/transport/tcp/pair.cc:547] Connection closed by peer [10.4.23.20]:11153
+(TP-sibling died first -> all_reduce in pop_bootstrapped fails -> SIGQUIT gang shutdown)
