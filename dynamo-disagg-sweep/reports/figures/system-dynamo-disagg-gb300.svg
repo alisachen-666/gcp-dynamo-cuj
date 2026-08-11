@@ -39,7 +39,7 @@
 <text x="549.0" y="178" font-size="9.5" fill="#2a78d6" text-anchor="middle">rc_mlx5, NIC-offloaded</text>
 <line x1="458" y1="188" x2="640" y2="188" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>
 <rect x="240" y="236" width="618" height="54" fill="#ffffff" stroke="#2a78d6" stroke-width="1.2" rx="6"/>
-<text x="549.0" y="253" font-size="10" fill="#52514e" text-anchor="middle">8× CX-7 mrdma NICs per node (DraNet DRA claims) — 8-rail RoCE fabric, disjoint /64 per rail</text>
+<text x="549.0" y="253" font-size="10" fill="#52514e" text-anchor="middle">8× CX-8 mrdma NICs per node (DraNet DRA claims) — 8-rail RoCE fabric, disjoint /64 per rail</text>
 <text x="549.0" y="267" font-size="9.5" fill="#898781" text-anchor="middle">UCX: NET_DEVICES=mlx5_0..7 (ordered) · GID_INDEX=5 · rail-aware same-subnet pairing · TLS=cuda_copy,rc_x,tcp</text>
 <line x1="346" y1="206" x2="346" y2="234" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>
 <line x1="752" y1="206" x2="752" y2="234" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-2a78d6)"/>

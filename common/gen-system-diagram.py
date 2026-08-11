@@ -81,7 +81,7 @@ p.append(ctext(CH_C, 178, 'rc_mlx5, NIC-offloaded', BLUE))
 p.append(arrow(CH_L + 6, 188, CH_R - 6, 188, BLUE))
 
 # NIC strip + platform strip
-p.append(box(240, 236, 618, 54, '8× CX-7 mrdma NICs per node (DraNet DRA claims) — 8-rail RoCE fabric, disjoint /64 per rail',
+p.append(box(240, 236, 618, 54, '8× CX-8 mrdma NICs per node (DraNet DRA claims) — 8-rail RoCE fabric, disjoint /64 per rail',
              'UCX: NET_DEVICES=mlx5_0..7 (ordered) · GID_INDEX=5 · rail-aware same-subnet pairing · TLS=cuda_copy,rc_x,tcp',
              stroke=BLUE, bold=False, fs=10))
 p.append(arrow(346, 206, 346, 234, BLUE))

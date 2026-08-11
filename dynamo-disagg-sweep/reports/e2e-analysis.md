@@ -197,7 +197,7 @@ Structured after the [gpu-recipes inference setup guides](https://github.com/AI-
 
 - **Orchestration**: GKE (a4x-max metal node pool), operator-less Dynamo — etcd + NATS via
   the NGC `dynamo-platform` helm chart; workers as plain Deployments/StatefulSets
-- **Machine type**: `a4x-maxgpu-4g-metal` — GB300 NVL72, 4 GPUs + 8× CX-7 mrdma NICs per
+- **Machine type**: `a4x-maxgpu-4g-metal` — GB300 NVL72, 4 GPUs + 8× CX-8 mrdma NICs per
   node; 18 nodes (full rack) for the largest topologies
 - **Enabled features**: `nvidia-dra-driver-gpu` (ComputeDomain CRD → IMEX channels for
   MNNVL), DraNet (mrdma NICs as DRA resource claims), hostPath DeepGEMM JIT cache
@@ -463,7 +463,7 @@ dispatches it to a prefill worker over the **NATS request plane** (workers self-
 **etcd**; a direct-TCP plane is the A/B variant). The **prefill workers** compute the
 8k-token prompt and produce its KV cache; that cache is handed to the **decode workers**
 over one of two networks — **path A** keeps it on NVLink inside the NVL72 domain
-(cuda_ipc/mooncake), **path B** offloads it to the 8 per-node CX-7 NICs via GPUDirect RDMA.
+(cuda_ipc/mooncake), **path B** offloads it to the 8 per-node CX-8 NICs via GPUDirect RDMA.
 Decode then generates the 1k output tokens (wide-EP with DeepEP all-to-all riding the same
 NVLink fabric path A uses — the root of the contention finding) and streams them back to the
 client. The bottom strips are the platform substrate: the NIC/RoCE fabric with its UCX
