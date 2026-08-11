@@ -49,6 +49,36 @@ base = RECIPE_PERF.read_text()
 
 def make_job(job_name, dgd, trace, conc, duration):
     t = base
+    # cache warmup: the recipe's warmup is 5 synthetic requests (CUDA graphs/JIT
+    # only) — it never touches the trace, so point 1 would measure a cold prefix
+    # cache and an empty router index. Replay the real trace for 900s at the
+    # ladder's first concurrency first (artifacts discarded) so every measured
+    # point sees steady-state caches, matching the sim's steady-state window.
+    first_conc = conc.split(",")[0]
+    t = t.replace(
+        'echo "Warmup complete"',
+        'echo "Warmup complete"\n\n'
+        '          CWARM_DIR="${ROOT_DIR}/cache-warmup"\n'
+        '          mkdir -p "$CWARM_DIR"\n'
+        '          aiperf profile \\\n'
+        '            -m "${TARGET_MODEL}" \\\n'
+        '            --tokenizer "${TARGET_MODEL}" \\\n'
+        '            --tokenizer-trust-remote-code \\\n'
+        '            --input-file "${TRACE_FILE}" \\\n'
+        '            --custom-dataset-type mooncake_trace \\\n'
+        '            --isl-block-size 64 \\\n'
+        '            --no-fixed-schedule \\\n'
+        '            --ignore-trace-delays \\\n'
+        '            --url "http://${ENDPOINT}" \\\n'
+        '            --streaming \\\n'
+        '            --ui dashboard \\\n'
+        '            --extra-inputs ignore_eos:true \\\n'
+        f'            --concurrency {first_conc} \\\n'
+        '            --benchmark-duration 900 \\\n'
+        '            --benchmark-grace-period 60 \\\n'
+        '            --request-timeout-seconds 1200 \\\n'
+        '            --artifact-dir "$CWARM_DIR" || echo "cache warmup non-fatal failure"\n'
+        '          echo "Cache warmup complete (trace replay, 900s)"', 1)
     # tokenizer handling (aiperf 0.12.0): its dataset-decode workers force
     # HF_HUB_OFFLINE, and the offline branch (_resolve_local_snapshot) only
     # accepts HF-cache repo ids — a filesystem --tokenizer path crashes with

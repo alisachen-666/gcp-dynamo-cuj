@@ -126,6 +126,31 @@ spec:
             --artifact-dir "${WARMUP_DIR}"
           echo "Warmup complete"
 
+          CWARM_DIR="${ROOT_DIR}/cache-warmup"
+          mkdir -p "$CWARM_DIR"
+          aiperf profile \
+            -m "${TARGET_MODEL}" \
+            --tokenizer "${TARGET_MODEL}" \
+            --tokenizer-trust-remote-code \
+            --input-file "${TRACE_FILE}" \
+            --custom-dataset-type mooncake_trace \
+              --isl-block-size 64 \
+              --no-fixed-schedule \
+              --ignore-trace-delays \
+            --isl-block-size 64 \
+            --no-fixed-schedule \
+            --ignore-trace-delays \
+            --url "http://${ENDPOINT}" \
+            --streaming \
+            --ui dashboard \
+            --extra-inputs ignore_eos:true \
+            --concurrency 8 \
+            --benchmark-duration 900 \
+            --benchmark-grace-period 60 \
+            --request-timeout-seconds 1200 \
+            --artifact-dir "$CWARM_DIR" || echo "cache warmup non-fatal failure"
+          echo "Cache warmup complete (trace replay, 900s)"
+
           MODEL_BASE="${TARGET_MODEL##*/}"
           TS=$(date +'%Y%m%d_%H%M%S')
 

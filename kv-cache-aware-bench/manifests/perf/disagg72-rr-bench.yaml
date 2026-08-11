@@ -15,7 +15,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: alisachen-sgl-disagg72-kv-bench
+  name: alisachen-kimi-k25-disagg-rr-bench
 spec:
   backoffLimit: 1
   activeDeadlineSeconds: 28800  # 2h hard cap on the Job
@@ -24,7 +24,7 @@ spec:
   template:
     metadata:
       labels:
-        app: alisachen-sgl-disagg72-kv-bench
+        app: alisachen-kimi-k25-disagg-rr-bench
       annotations:
         gke-gcsfuse/volumes: "true"
         gke-gcsfuse/memory-limit: 4Gi
@@ -40,7 +40,7 @@ spec:
                   - key: nvidia.com/dynamo-graph-deployment-name
                     operator: In
                     values:
-                      - sgl-disagg72-kv
+                      - kimi-k25-disagg-rr
               topologyKey: kubernetes.io/hostname
       # tolerations:     # uncomment to populate any tolerations for the gpu nodes
       containers:
@@ -197,7 +197,7 @@ spec:
         - name: TARGET_MODEL
           value: alisachen/Kimi-K2.5-NVFP4
         - name: ENDPOINT
-          value: sgl-disagg72-kv-frontend:8000
+          value: kimi-k25-disagg-rr-frontend:8000
         - name: TRACE_FILE
           value: /model-cache/traces/weka_256k_bench4k.jsonl
         - name: CONCURRENCIES
