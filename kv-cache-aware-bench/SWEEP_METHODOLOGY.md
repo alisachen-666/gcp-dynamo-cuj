@@ -4,7 +4,10 @@ This document details the three-layer toolchain — **Profiler → AIConfigurato
 DynoSim → silicon** — used to tune and select benchmark operating points for the
 KV-cache-aware routing study, and the decision rules that pick the reported data points.
 Companion artifacts: `aic-results/` (all solver candidates + sweep CSVs),
-`reports/` (interactive Pareto/learnings pages), `RESULTS.md` (findings log).
+`reports/` (interactive Pareto/learnings pages), `RESULTS.md` (findings log),
+`INFERENCEX_PIPELINE.md` (reference pipeline analysis: how InferenceX replays the
+same corpus, why its scenario contract precludes our replay-fidelity failure, and
+which of its mechanisms we adopted or deliberately diverged from).
 
 ## The layered toolchain
 
