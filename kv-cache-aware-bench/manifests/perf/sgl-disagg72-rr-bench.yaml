@@ -139,6 +139,8 @@ spec:
             --public-dataset semianalysis_cc_traces_weka_062126_256k \
             --no-fixed-schedule \
               --ignore-trace-delays \
+              --slice-duration 1.0 \
+              --max-context-length 262144 \
             --isl-block-size 64 \
             --no-fixed-schedule \
             --ignore-trace-delays \
@@ -170,6 +172,8 @@ spec:
               --public-dataset semianalysis_cc_traces_weka_062126_256k \
               --no-fixed-schedule \
               --ignore-trace-delays \
+              --slice-duration 1.0 \
+              --max-context-length 262144 \
               --url "http://${ENDPOINT}" \
               --streaming \
               --extra-inputs ignore_eos:true \

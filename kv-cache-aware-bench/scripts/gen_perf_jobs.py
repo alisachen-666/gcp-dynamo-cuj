@@ -125,7 +125,9 @@ def make_job(job_name, dgd, trace, conc, duration):
     t = t.replace("--input-file '${TRACE_FILE}' \\", "--public-dataset semianalysis_cc_traces_weka_062126_256k \\")
     t = t.replace('--input-file "${TRACE_FILE}" \\', "--public-dataset semianalysis_cc_traces_weka_062126_256k \\")
     t = t.replace("--custom-dataset-type mooncake_trace \\",
-                  "--no-fixed-schedule \\\n              --ignore-trace-delays \\")
+                  "--no-fixed-schedule \\\n              --ignore-trace-delays \\\n"
+                  "              --slice-duration 1.0 \\\n"
+                  "              --max-context-length 262144 \\")
     # model-cache is gcsfuse: sidecar injection annotation required
     t = t.replace("      labels:\n        app: kimi-k25-agg-rr-bench",
                   "      labels:\n        app: kimi-k25-agg-rr-bench\n"
