@@ -1,0 +1,13 @@
+# mrdma claim template for RDMA-KV experiments (schedule-time DRA allocation)
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata: {name: mrdma-all, namespace: dynamo-cloud}
+spec:
+  spec:
+    devices:
+      requests:
+      - name: rdma
+        exactly:
+          deviceClassName: mrdma.google.com
+          allocationMode: ExactCount
+          count: 8
