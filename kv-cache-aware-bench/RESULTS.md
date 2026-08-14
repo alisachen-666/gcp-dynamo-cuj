@@ -200,3 +200,30 @@ _(pending)_
 ## Incidents / Anomalies
 
 _(record KV transfer path failures, cache flush issues, OOMs, node preemptions here; per stop policy, any non-RDMA KV path or transfer failure stops the job immediately and is logged here)_
+
+## 2026-08-14 — FIRST VALID silicon KV-vs-RR comparison (sglang agg, native Weka loader)
+
+Warmed protocol, native `--public-dataset semianalysis_cc_traces_weka_062126_256k`
+(full 393-trace corpus), 6×TP4 workers on np-2, engine sglang 0.5.14 + dynamo 1.3.1.
+Runs: `perf/1786664268_...agg-rr` / `perf/1786665995_...agg-kv` (per-request JSONs in
+`sglang/results/silicon/`).
+
+| conc | KV tok/s | KV p50/p95 TTFT | RR tok/s | RR p50/p95 TTFT | thr | p99 TTFT |
+|---|---|---|---|---|---|---|
+| 8  | 1,140 | 0.38 / 1.94 s | 964   | 0.60 / 4.65 s | 1.18× | 7.1 vs 11.4 s |
+| 16 | 1,748 | 0.40 / 1.82 s | 1,253 | 0.60 / 6.18 s | 1.39× | 4.1 vs 11.7 s |
+| 24 | 1,881 | 0.42 / 2.02 s | 1,379 | 0.63 / 7.86 s | 1.36× | 4.3 vs 12.5 s |
+| 32 | 2,119 | 0.44 / 2.57 s | 1,398 | 0.72 / 9.52 s | **1.52×** | 5.6 vs 27.2 s |
+
+Findings:
+1. **KV-aware routing wins are real on silicon**: 1.18–1.52× throughput, TTFT p50
+   0.61–0.67× of RR, p95 2.4–3.7× better, p99 up to 4.9× better. Layer-3
+   verification criterion (KV p50 ≤ 0.7× RR) passes at every point.
+2. **Sim validation at the selected cell (conc 16)**: RR silicon p95 6.18 s vs sim
+   6.30 s (remarkable agreement); throughput ratio 1.39× vs sim 1.51×; sim was
+   optimistic on KV tail (0.86 s predicted vs 1.82 s measured).
+3. **RR is goodput-infeasible from conc 16 up** (p95 > 5 s) while KV holds ≤ 2.6 s
+   everywhere — the "KV routing enables the workload" claim confirmed.
+4. **Revision needed**: both curves still climb at conc 32 (no sim-predicted peak at
+   16 — reuse slashes per-request prefill work, moving the knee right). Extend the
+   agg ladder to conc 48/64 and re-select the operating point.
