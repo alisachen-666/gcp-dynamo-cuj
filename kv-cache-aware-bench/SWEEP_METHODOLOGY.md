@@ -21,7 +21,7 @@ AIC        →  engine configuration: what should ONE worker look like?
    ↓ feeds (rates)
 DynoSim    →  deployment configuration: how many workers, which router, at what load?
    ↓ shortlists
-Silicon    →  measured truth on cmcs-a4xmax; telemetry recalibrates DynoSim
+Silicon    →  measured truth on <cluster>; telemetry recalibrates DynoSim
 ```
 
 This mirrors NVIDIA's own published simulate-then-verify methodology for Dynamo
@@ -115,11 +115,21 @@ rates) feeds the next DynoSim recalibration.
    always *report* latency next to throughput but never filter by it. Finding: the
    ungated global throughput ceiling (3:3 / conc 128 / KV-tuned, 2,978 tok/s @ 0.60 s)
    coincides with the gated choice — the KV operating point isn't a latency compromise.
-3. **Revision 2 (current headline rule): best performance with BOTH policies pre-knee.**
+3. **Revision 2: best performance with BOTH policies pre-knee.**
    The reported comparison cell is the highest load at which round-robin's admission
    queue still drains (bounded, stable TTFT) — eliminating any "you overloaded the
    baseline" critique. Sim prediction: **3:3 at concurrency 48** — KV ≈ 2.2–2.5k tok/s
    @ 0.4–0.8 s TTFT p95 vs RR ≈ 2.1k @ 4.65 s (~6–11× tail gap, both healthy).
+
+4. **Revision 3 (current, 2026-08-18): no latency SLO at all.** The 5 s TTFT p95
+   line (recipe-inherited) is retired even as an operational proxy. A point is
+   *bounded* iff the admission queue drains, determined intrinsically: (a)
+   within-run TTFT stationarity — no upward trend across the measured window
+   (first-half vs second-half percentiles); (b) cross-concurrency slope — latency
+   grows sub-linearly point-to-point rather than compounding. Framing 1
+   (both-bounded same cell) and framing 2 (each policy at its own knee) both use
+   this classification. TTFT percentiles are always *reported* next to throughput;
+   they are never a gate, filter, or selection criterion.
 
 **The knee framing** that motivates rule 3: below the prefill-capacity knee, KV-routing
 gain = recompute savings (bounded, ~1.5–4× TTFT — consistent with Baseten's published
