@@ -89,6 +89,7 @@ UCX_ENV = [
     {"name": "PYTHONUNBUFFERED", "value": "1"},
     {"name": "DYN_SKIP_SGLANG_LOG_FORMATTING", "value": "1"},
     {"name": "UCX_PROTO_INFO", "value": "y"},
+    {"name": "UCX_LOG_LEVEL", "value": "info"},  # kv-transport-guard needs wireup lines
     {"name": "NCCL_DEBUG", "value": "VERSION"},
 ]
 
