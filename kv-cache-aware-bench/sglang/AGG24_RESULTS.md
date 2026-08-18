@@ -7,7 +7,7 @@ produced them.
 
 ## Setup (fixed across both arms)
 
-- **Hardware**: 6 GB300 nodes on one NVL72 pool (np-2), 4 GPUs each = 24 GPUs.
+- **Hardware**: 6 GB300 nodes on one NVL72 pool (nodepool-2), 4 GPUs each = 24 GPUs.
 - **Serving**: 6 independent single-node TP4/EP4 sglang workers
   (`lmsysorg/sglang:v0.5.14-cu130-runtime` + `ai-dynamo[sglang]==1.3.1`),
   NVFP4 Kimi-K2.5, `--mem-fraction-static 0.85 --context-length 262144
@@ -76,6 +76,96 @@ at conc 32 (mean 27.0 ms vs KV 22.1 ms).
    is the difference — see `INFERENCEX_PIPELINE.md` §3.
 6. **Open item**: extend the ladder to conc 48/64 to find KV's true knee (both
    curves unsaturated at 32); re-select the headline operating point there.
+
+## How these points were chosen: the AIC → DynoSim → silicon chain
+
+This section records the tuning/sweeping work *behind* the results table — how the
+operating points were selected in simulation, how silicon validated them, and how
+the live sweep was designed to isolate the KV-routing effect.
+
+### 1. AIC (engine level): what should one agg worker be?
+
+`aiconfigurator cli default … --backend sglang --total-gpus 24 --isl 137000 --osl
+1100 --database-mode SILICON` (warm bracket `--prefix 133000`; cold bracket no
+prefix, TTFT relaxed to 30 s). Outcomes that shaped everything downstream:
+
+- **Worker shape**: 6 independent single-node TP4/EP4 workers (chunked prefill,
+  page 64) — the agg fleet both arms run.
+- **Cold infeasibility**: a cold 137k-token prefill cannot meet a 5 s TTFT on any
+  24-GPU agg configuration → this workload is servable only through prefix reuse.
+  That negative result is the *thesis* of the KV-vs-RR comparison: the entire
+  question is which router converts the trace's 84.6% block reuse into actual hits.
+- **The sglang batch cliff**: AIC's TPOT tables show a ≈2.5× per-token cost jump
+  at per-worker batch ≥ 8 for 137k ISL (ratio 0.70 → 2.47 vs trtllm). Encoded in
+  the simulator as a piecewise TPOT model; it predicts deep-concurrency agg
+  operation is counterproductive — which bounded the ladder.
+- **Seed constants for DynoSim** (AIC-ratio transfer onto live-calibrated trtllm
+  values): agg prefill 23.7k tok/s/worker (45k × 0.527 cold-floor ratio), TPOT
+  7.0 + 1.6·bs below the cliff, 28.4 + 5.68·bs above.
+
+### 2. DynoSim (deployment level): which router, at what load?
+
+Full policy × concurrency grid over the real trace's hash_ids (6 workers,
+per-worker radix caches, LRU at measured KV capacity; exact dynamo v1.3.1
+`worker_logit` scoring): 11 policies (rr, least-loaded, kv-defaults, kv-tuned ×
+credit {0.5…1.0}, scale {1.5, 3.0}) × conc {8…256} — `results/dynosim_sgl_agg_v2.csv`.
+Findings that selected the silicon points:
+
+- **Both policies peak at conc ≈ 16** (the batch cliff makes deeper concurrency
+  counterproductive for *both* — unlike trtllm agg, there is no deep-batch regime
+  where RR catches up, and no RR crossover at any load). Predicted cell: KV 1,172
+  tok/s @ 0.86 s p95 vs RR 775 @ 6.30 s — 1.51×.
+- **RR is recompute-bound, not queue-bound**: its ~6.3 s p95 at the peak is the
+  cost of re-prefilling ~5/6 of each session at 23.7k tok/s, present at *every*
+  concurrency — so the sim predicted RR latency-infeasibility as a structural
+  property, not an overload artifact. Silicon confirmed (RR p95 4.7–9.5 s
+  across the ladder).
+- **Router-flag grid: defaults win at every agg operating point.** Tuned variants
+  pay only post-knee or in prefill-starved topologies; mis-tuning costs up to
+  50% throughput on sglang agg (aggressive prefill-load-scale fights the cliff).
+  This is why the silicon KV arm runs defaults + temperature 0 and why the live
+  flag-sweep budget was spent on the 72-GPU disagg cell instead, where the grid
+  showed tuning *could* matter.
+- **Point selection**: ladder 8/16/24/32 — brackets the predicted joint peak at
+  16 from both sides, so silicon can confirm or refute both the peak's location
+  and the knee shape without trusting the sim's absolutes.
+
+### 3. Silicon validation: how the real jobs test the sim's claims
+
+Two identical 6×TP4 arms (nodepool-2), differing in exactly one flag
+(`--router-mode`); native deterministic trace replay; per-point 900 s trace
+warmup + 1800 s measurement; KV-routing *verified active* (router-predicted hit
+0.80 mean via `dynamo_component_router_kv_hit_rate`, 92% engine-measured reuse)
+so a silent load-routing fallback cannot masquerade as a KV result. Verdicts:
+
+| Sim claim | Silicon verdict |
+|---|---|
+| KV/RR ratio 1.11–1.63× over the ladder | **Confirmed within ~10%** (1.18–1.52×) |
+| RR p95 ≈ 6.3 s at conc 16 | **Confirmed** (6.18 s) |
+| RR latency-infeasible at every point | Confirmed from conc 16 up (4.65 s at conc 8) |
+| Joint throughput peak at conc 16 | **Refuted for KV** — silicon KV still climbs at 32 (real reuse cuts per-request prefill more than seeded); RR knees at 24 as predicted |
+| KV tail p95 ≈ 0.9 s | Optimistic — measured 1.8–2.6 s (dispersion missing from sim) |
+
+The two refuted rows became calibration-v2 items (raise sub-cliff throughput
+slope, add tail dispersion) — the simulate → verify → refit loop working as
+designed, and the reason the sim is trusted for *ratios and knee locations*, not
+absolutes.
+
+### 4. The live sweep design: why the ladder isolates KV-routing impact
+
+The silicon sweep axis is concurrency (8 → 32) with everything else frozen — the
+router flag is the only difference between arms, so the widening gap (1.18× →
+1.52×) is attributable to routing alone. The ladder highlights the impact in
+three distinct regimes: at light load (conc 8) both policies are healthy and KV's
+gain is pure recompute savings; at mid load RR crosses its knee (conc 24
+flatline) while KV keeps scaling; at conc 32 the gap is maximal and RR's p99
+(27 s) shows queue divergence. Per-variant cache warmup before every measured
+point ensures each policy is measured against cache state *it* produced — an RR
+arm measured on KV-warmed caches (or vice versa) would confound the comparison.
+Router-flag variants were deliberately *not* swept live at this scale: the sim
+grid's verdict (defaults optimal, tuning harmful up to 50%) made live agg
+flag-sweeping negative-expected-value; the live flag sweep ran at the 72-GPU
+disagg cell where the grid predicted sensitivity.
 
 ## Reproduction inventory (paths in this repo)
 
