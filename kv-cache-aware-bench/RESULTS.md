@@ -172,8 +172,9 @@ ceiling. Remaining caveats: decode model calibrated to one live point; 393-way m
 | | 2 | 2D | Disagg 24-GPU, Weka trace, KV-Tuned Strategy C | ⬜ | |
 | | 2 | 2E | Profiler calibration (during 2D) | ⬜ | |
 | | 3 | sim | Disagg 72-GPU DynoSim config derivation | ⬜ | |
-| | 3 | 3A-live | Disagg 72-GPU live, round-robin | ⬜ | |
-| | 3 | 3B-live | Disagg 72-GPU live, KV-Tuned | ⬜ | |
+| 2026-08-17/18 | 3 | 3A-live | Disagg 72-GPU live, round-robin (sglang 6P:12D) | ⚠️ | ladder v1 c96–c384 + down-sweep c12–c72 complete; 655→1,080 tok/s then flat ~1.1k; TTFT p50 13 s@12 → 205 s@192. Stack-bound, not router-bound — see `sglang/D72_RESULTS.md` |
+| 2026-08-18 | 3 | 3A/3B-9x9 | Disagg 72-GPU 9P:8D topology probe | ⬜ | KV c192/c240 only (1,257 / 1,192 tok/s, same ceiling); 4 RR attempts produced no export; `sgl-d72-9x9` stack still deployed (idle) |
+| 2026-08-17 | 3 | 3B-live | Disagg 72-GPU live, KV (sglang 6P:12D; defaults won flag sweep) | ⚠️ | ladder v2 c192/288/384 (fresh frontend/pt) = 1,232 / 1,227 / 1,254 tok/s, TTFT p50 202–374 s; 6-variant router-flag sweep @c192 all within ±3%. KV routing verified active (router hit-rate mean 0.35) but KV≈RR: both throttled at ~1.2k tok/s. Prime suspect: `UCX_IB_GPU_DIRECT_RDMA=n` bypass applied post-rebuild (pre-rebuild 08-11 runs reached 2.7–4.8k). **No 72-GPU KV-vs-RR verdict yet** — `sglang/D72_RESULTS.md` |
 | | 4 | — | Synthesis + Pareto matrix | ⬜ | |
 
 ## Headline Metrics
@@ -200,6 +201,9 @@ _(pending)_
 ## Incidents / Anomalies
 
 _(record KV transfer path failures, cache flush issues, OOMs, node preemptions here; per stop policy, any non-RDMA KV path or transfer failure stops the job immediately and is logged here)_
+
+- **2026-08-13 → ongoing — GDR bypass on all 72-GPU disagg workers.** `disagg72_relaunch.sh` set `UCX_IB_GPU_DIRECT_RDMA=n` on `sgl-disagg72-{kv,rr}-{prefill,decode}` after the post-rebuild transfer test failed; the 9x9 stack inherited it. KV transfers are host-staged; the transport gate (`common/kv-transport-guard.sh`) does not detect this (it only flags TCP bulk rows / NIXL errors). All post-rebuild 72-GPU numbers (`sglang/D72_RESULTS.md`) carry this caveat and are not stop-policy compliant.
+- **2026-08-17 — router-state stall, 72-GPU KV ladder v1.** c288 degraded to 785 tok/s and c384 failed outright (0/384 responses; two `alisachen-sgl-disagg72-kv-bench` pods left in Error). Mitigated by fresh-frontend-per-point (ladder v2); residual frontend queue leak still visible (`queued_requests` avg 307 > conc 192).
 
 ## 2026-08-14 — FIRST VALID silicon KV-vs-RR comparison (sglang agg, native Weka loader)
 
